@@ -27,7 +27,7 @@ class EncodeError(Exception):
     pass
 
 
-class OverflowEncodeError(Exception):
+class OverflowEncodeError(EncodeError):
     pass
 
 
