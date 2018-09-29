@@ -23,9 +23,7 @@ setup(
     install_requires=[
         'enum34>=1.1.6;python_version<"3.4"',
     ],
-    tests_require = [
-        'mock',
-    ],
+    tests_require = [],
     classifiers=[  # Optional
         # How mature is this project? Common values are
         #   3 - Alpha
