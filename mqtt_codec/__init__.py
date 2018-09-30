@@ -139,7 +139,7 @@ def decode_varint(f, max_bytes=4):
             # No further bytes
             break
         elif num_bytes_consumed >= max_bytes:
-            raise DecodeError('Variable integer contained more than 4 bytes.')
+            raise DecodeError('Variable integer contained more than maximum bytes ({}).'.format(max_bytes))
 
     return num_bytes_consumed, value
 
