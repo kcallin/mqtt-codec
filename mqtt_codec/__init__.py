@@ -67,6 +67,14 @@ class LimitReader(object):
 
 class FileDecoder(object):
     def __init__(self, f):
+        """Creates an object that extracts values from the file-like
+        object `f`.
+
+        Parameters
+        ----------
+        f: file
+            Object with read method.
+        """
         self.__f = f
         self.__num_bytes_consumed = 0
 
@@ -100,7 +108,7 @@ class FileDecoder(object):
 
         Returns
         -------
-        int, str
+        (num_bytes_consumed: int, value: str)
             Number of bytes consumed, string
         """
         num_bytes_consumed, s = decode_utf8(self.__f)
@@ -125,7 +133,7 @@ class FileDecoder(object):
         return num_bytes_consumed, value
 
     def read(self, num_bytes):
-        """
+        """Read `num_bytes` and return them.
 
         Returns
         -------
