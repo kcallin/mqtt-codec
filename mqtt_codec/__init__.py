@@ -96,16 +96,17 @@ def are_flags_valid(packet_type, flags):
 
 
 def decode_varint(f, max_bytes=4):
-    """
-    line 297
+    """Decode variable integer using algorithm similar to that described
+    in MQTT Version 3.1.1 line 297.
 
     Parameters
     ----------
     f: file
-        File-like object.
-    max_bytes: int
+        Object with a read method.
+    max_bytes: int or None
         If a varint cannot be constructed using `max_bytes` or fewer
-        from f then raises a `DecodeError`.
+        from f then raises a `DecodeError`.  If None then there is no
+        maximum number of bytes.
 
     Raises
     -------
@@ -138,20 +139,20 @@ def decode_varint(f, max_bytes=4):
         if u8 & 0x80 == 0:
             # No further bytes
             break
-        elif num_bytes_consumed >= max_bytes:
+        elif max_bytes is not None and num_bytes_consumed >= max_bytes:
             raise DecodeError('Variable integer contained more than maximum bytes ({}).'.format(max_bytes))
 
     return num_bytes_consumed, value
 
 
 def encode_varint(v, f):
-    """
+    """Encode integer `v` to file `f`.
 
     Parameters
     ----------
     v: int
     f: file
-        File-like object
+        Object containing a write method.
 
     Returns
     -------
@@ -160,38 +161,55 @@ def encode_varint(v, f):
     """
     num_bytes = 0
 
-    try:
-        while True:
-            b = v % 0x80
-            v = v // 0x80
+    while True:
+        b = v % 0x80
+        v = v // 0x80
 
-            if v > 0:
-                b = b | 0x80
+        if v > 0:
+            b = b | 0x80
 
-            f.write(chr(b))
+        f.write(chr(b))
 
-            num_bytes += 1
-            if v == 0:
-                break
+        num_bytes += 1
+        if v == 0:
+            break
 
-        return num_bytes
-    except IndexError:
+    return num_bytes
+
+
+def decode_utf8(f):
+    """Decode a utf-8 string encoded as described in MQTT Version
+    3.1.1 section 1.5.3 line 177.  This is a 16-bit unsigned length
+    followed by a utf-8 encoded string.
+
+    Parameters
+    ----------
+    f: file
+        File-like object with read method.
+
+    Returns
+    -------
+    (num_bytes_consumed: int, decoded: str)
+    """
+    decode = codecs.getdecoder('utf8')
+
+    buf = f.read(FIELD_U16.size)
+    if len(buf) < FIELD_U16.size:
         raise UnderflowDecodeError()
 
+    (num_utf8_bytes,) = FIELD_U16.unpack_from(buf)
+    num_bytes_consumed = FIELD_U16.size + num_utf8_bytes
 
-def decode_utf8(buf):
-    try:
-        decode = codecs.getdecoder('utf8')
-
-        num_string_bytes = (buf[0] << 8) + buf[1]
-        num_bytes_consumed = 2 + num_string_bytes
-        s, num_chars = decode(buf[2:num_bytes_consumed])
-
-        return num_bytes_consumed, s
-    except IndexError:
+    buf = f.read(num_utf8_bytes)
+    if len(buf) < num_utf8_bytes:
         raise UnderflowDecodeError()
+
+    try:
+        s, num_chars = decode(buf)
     except UnicodeError:
         raise DecodeError('Invalid unicode character.')
+
+    return num_bytes_consumed, s
 
 
 def encode_utf8(s, f):
@@ -227,19 +245,32 @@ def encode_utf8(s, f):
     return num_encoded_bytes
 
 
-def decode_bytes(buf):
-    try:
-        decode = codecs.getdecoder('utf8')
+def decode_bytes(f):
+    """Decode a buffer length from a 2-byte unsigned int then read the
+    subsequent bytes.
 
-        num_string_bytes = (ord(buf[0]) << 8) + ord(buf[1])
-        num_bytes_consumed = 2 + num_string_bytes
-        s, num_chars = decode(buf[2:num_bytes_consumed])
+    Parameters
+    ----------
+    f: file
+        File-like object with read method.
 
-        return num_bytes_consumed, s
-    except IndexError:
+    Returns
+    -------
+    (num_bytes_consumed: int, decoded: bytes)
+    """
+
+    buf = f.read(FIELD_U16.size)
+    if len(buf) < FIELD_U16.size:
         raise UnderflowDecodeError()
-    except UnicodeError:
-        raise DecodeError('Invalid unicode character.')
+
+    (num_bytes,) = FIELD_U16.unpack_from(buf)
+    num_bytes_consumed = FIELD_U16.size + num_bytes
+
+    buf = f.read(num_bytes)
+    if len(buf) < num_bytes:
+        raise UnderflowDecodeError()
+
+    return num_bytes_consumed, buf
 
 
 def encode_bytes(src_buf, dst_buf):
@@ -450,12 +481,14 @@ class MqttPacketBody(MqttFixedHeader):
         """
 
         num_header_bytes_consumed, header = MqttFixedHeader.decode(buf)
-        num_body_bytes_consumed, connect = cls.decode_body(header, buf[num_header_bytes_consumed:])
+        num_body_bytes_consumed, packet = cls.decode_body(header, buf[num_header_bytes_consumed:])
         if header.remaining_len != num_body_bytes_consumed:
-            raise DecodeError('Header remaining length not equal to body bytes.')
+            params = header.remaining_len, num_body_bytes_consumed
+            msg = 'Header remaining length {} not equal to body bytes consumed {}.'.format(*params)
+            raise DecodeError(msg)
         num_bytes_consumed = num_header_bytes_consumed + num_body_bytes_consumed
 
-        return num_bytes_consumed, connect
+        return num_bytes_consumed, packet
 
 
 class MqttConnect(MqttPacketBody):
@@ -604,11 +637,15 @@ class MqttConnect(MqttPacketBody):
         buf = buf[2:]
         num_bytes_consumed += 2
 
-        num_bytes_consumed, buf, client_id = decode_utf8_buf(num_bytes_consumed, buf)
+        bio = BytesIO(buf)
+        num_str_byes, client_id = decode_utf8(bio)
+        num_bytes_consumed += num_str_byes
 
         if has_will:
-            num_bytes_consumed, buf, will_topic = decode_utf8_buf(num_bytes_consumed, buf)
-            num_bytes_consumed, buf, will_message = decode_bytes_buf(num_bytes_consumed, buf)
+            num_str_byes, will_topic = decode_utf8(bio)
+            num_bytes_consumed += num_str_byes
+            num_bytes, will_message = decode_bytes(buf)
+            num_bytes_consumed += num_bytes
             will = MqttWill(will_qos, will_topic, will_message, will_retained)
         else:
             if will_qos != 0:
@@ -618,12 +655,14 @@ class MqttConnect(MqttPacketBody):
             will = None
 
         if has_username:
-            num_bytes_consumed, buf, username = decode_utf8_buf(num_bytes_consumed, buf)
+            num_str_byes, username = decode_utf8(bio)
+            num_bytes_consumed += num_str_byes
         else:
             username = None
 
         if has_password:
-            num_bytes_consumed, buf, password = decode_utf8_buf(num_bytes_consumed, buf)
+            num_str_byes, password = decode_utf8(bio)
+            num_bytes_consumed += num_str_byes
         else:
             password = None
 
@@ -645,25 +684,6 @@ class MqttConnect(MqttPacketBody):
                           self.username,
                           self.password,
                           self.will)
-
-
-def decode_utf8_buf(num_bytes_consumed, buf):
-    """
-
-    Parameters
-    ----------
-    buf
-
-    Returns
-    -------
-    (num_bytes_consumed, new_buf, utf8_str)
-    """
-    num_str_bytes, s = decode_utf8(buf)
-
-    buf = buf[num_str_bytes:]
-    num_bytes_consumed += num_str_bytes
-
-    return (num_bytes_consumed, buf, s)
 
 
 def decode_bytes_buf(num_bytes_consumed, buf):
@@ -855,7 +875,8 @@ class CursorBuf(object):
         int, str
             Number of bytes consumed, string
         """
-        num_bytes_consumed, s = decode_utf8(self.view)
+        with BytesIO(self.view) as f:
+            num_bytes_consumed, s = decode_utf8(f)
 
         self.num_bytes_consumed += num_bytes_consumed
         self.view = self.view[num_bytes_consumed:]

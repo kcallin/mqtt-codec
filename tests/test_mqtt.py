@@ -78,7 +78,8 @@ class TestCodecVarInt(unittest.TestCase):
 class TestUtf8Codec(unittest.TestCase):
     def test_decode_encode(self):
         buf = a2b_hex('000541f0aa9b94')
-        num_bytes_consumed, s = mqtt.decode_utf8(bytearray(buf))
+        with BytesIO(buf) as f:
+            num_bytes_consumed, s = mqtt.decode_utf8(f)
         self.assertEqual(u'A\U0002a6d4', s)
         self.assertEqual(len(buf), num_bytes_consumed)
 
