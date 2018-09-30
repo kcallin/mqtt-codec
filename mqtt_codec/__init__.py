@@ -30,10 +30,31 @@ FIELD_PACKET_ID = FIELD_U16
 
 class BytesReader(object):
     def __init__(self, buf):
+        """Creates a file-like object that reads from a buffer.
+
+        Parameters
+        ----------
+        buf: bytes
+            Object to read from.
+        """
         self.__buf = buf
         self.__num_bytes_consumed = 0
 
     def read(self, max_bytes=1):
+        """Read at most `max_bytes` from internal buffer.
+
+        Parameters
+        -----------
+        max_bytes: int
+            Maximum number of bytes to read.
+
+        Returns
+        --------
+        bytes
+            Bytes extracted from internal buffer.  Length may be less
+            than `max_bytes`.  On end-of file returns a bytes object
+            with zero-length.
+        """
         if self.__num_bytes_consumed + max_bytes >= len(self.__buf):
             max_bytes = len(self.__buf) - self.__num_bytes_consumed
 
@@ -51,9 +72,30 @@ class LimitReader(object):
 
     @property
     def limit(self):
+        """
+
+        Returns
+        -------
+        int or None
+        """
         return self.__limit
 
     def read(self, max_bytes=1):
+        """Read at most `max_bytes` from internal buffer.
+
+        Parameters
+        -----------
+        max_bytes: int
+            Maximum number of bytes to read.
+
+        Returns
+        --------
+        bytes
+            Bytes extracted from internal buffer.  Length may be less
+            than `max_bytes`.  On end-of file returns a bytes object
+            with zero-length.
+        """
+
         if self.limit is None:
             b = self.__f.read(max_bytes)
         else:
