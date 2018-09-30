@@ -1,7 +1,7 @@
 """
-============
-MQTT Codecs
-============
+===================
+MQTT Packet Codecs
+===================
 
 
 .. note:: MQTT decoders should read from files
@@ -57,17 +57,20 @@ class MqttControlPacketType(IntEnum):
 
 
 def are_flags_valid(packet_type, flags):
-    """
-    [MQTT-2.2.2-1]
+    """True when flags comply with [MQTT-2.2.2-1] requirements based on
+    packet_type; False otherwise.
 
     Parameters
     ----------
-    packet_type
-    flags
+    packet_type: MqttControlPacketType
+    flags: int
+        Integer representation of 4-bit MQTT header flags field.
+        Values outside of the range [0, 15] will certainly cause the
+        function to return False.
 
     Returns
     -------
-
+    bool
     """
     if packet_type == MqttControlPacketType.publish:
         rv = 0 <= flags <= 15
@@ -92,38 +95,53 @@ def are_flags_valid(packet_type, flags):
     return rv
 
 
-def decode_varint(buf):
+def decode_varint(f, max_bytes=4):
     """
     line 297
 
     Parameters
     ----------
-    buf
+    f: file
+        File-like object.
+    max_bytes: int
+        If a varint cannot be constructed using `max_bytes` or fewer
+        from f then raises a `DecodeError`.
+
+    Raises
+    -------
+    DecodeError
+        When length is greater than max_bytes.
+    UnderflowDecodeError
+        When file ends before enough bytes can be read to construct the
+        varint.
 
     Returns
     -------
+    (num_bytes_consumed: int, v: int)
 
     """
     num_bytes_consumed = 0
 
-    try:
-        v = 0
-        m = 1
+    value = 0
+    m = 1
 
-        while True:
-            b = buf[num_bytes_consumed]
-            v += (b & 0x7f) * m
-            m *= 0x80
-            num_bytes_consumed += 1
+    while True:
+        buf = f.read(1)
+        if len(buf) == 0:
+            raise UnderflowDecodeError()
 
-            if b & 0x80 == 0:
-                break
-            elif num_bytes_consumed >= 4:
-                raise DecodeError('Variable integer contained more than 4 bytes.')
+        (u8,) = FIELD_U8.unpack(buf)
+        value += (u8 & 0x7f) * m
+        m *= 0x80
+        num_bytes_consumed += 1
 
-        return num_bytes_consumed, v
-    except IndexError:
-        raise UnderflowDecodeError()
+        if u8 & 0x80 == 0:
+            # No further bytes
+            break
+        elif num_bytes_consumed >= max_bytes:
+            raise DecodeError('Variable integer contained more than 4 bytes.')
+
+    return num_bytes_consumed, value
 
 
 def encode_varint(v, f):
@@ -242,7 +260,7 @@ def encode_bytes(src_buf, dst_buf):
 class MqttFixedHeader(object):
     """
 
-    See 2.2 Fixed Header: 233
+    See MQTT Version 3.1.1 section 2.2 Fixed Header (line 233).
 
     +--------+-------------------------------+
     |        |              Bit              |
@@ -253,7 +271,6 @@ class MqttFixedHeader(object):
     +--------+---------------+---------------+
     | byte 2 |      remaining length         |
     +--------+-------------------------------+
-
     """
     def __init__(self, packet_type, flags, remaining_len):
         """
@@ -262,6 +279,8 @@ class MqttFixedHeader(object):
         ----------
         packet_type: MqttControlPacketType
         flags: int
+            An assert statement verifies
+            that are_flags_valid(packet_type, flags) is True.
         remaining_len: int
         """
         self.packet_type = packet_type
@@ -309,7 +328,7 @@ class MqttFixedHeader(object):
             raise UnderflowDecodeError()
 
         num_bytes_consumed = 1
-        num_nrb_bytes, num_remaining_bytes = decode_varint(buf[num_bytes_consumed:])
+        num_nrb_bytes, num_remaining_bytes = decode_varint(BytesIO(buf[num_bytes_consumed:]))
         num_bytes_consumed += num_nrb_bytes
 
         return num_bytes_consumed, MqttFixedHeader(packet_type, flags, num_remaining_bytes)

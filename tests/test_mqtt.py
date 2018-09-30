@@ -35,7 +35,8 @@ class TestCodecVarInt(unittest.TestCase):
         self.assertEqual(expected_buf, actual_buf)
         self.assertEqual(num_bytes_written, len(actual_buf))
 
-        self.assertEqual((len(actual_buf), n), mqtt.decode_varint(bytearray(expected_buf)))
+        bio.seek(0)
+        self.assertEqual((len(actual_buf), n), mqtt.decode_varint(bio))
 
     def test_0(self):
         self.assert_codec_okay(0, '00')
@@ -62,16 +63,16 @@ class TestCodecVarInt(unittest.TestCase):
         self.assert_codec_okay(268435455, 'ffffff7f')
 
     def test_underflow_zero_bytes(self):
-        buf = bytearray()
-        self.assertRaises(mqtt.UnderflowDecodeError, mqtt.decode_varint, buf)
+        bio = BytesIO()
+        self.assertRaises(mqtt.UnderflowDecodeError, mqtt.decode_varint, bio)
 
     def test_mid_underflow(self):
-        buf = bytearray(a2b_hex('808080'))
-        self.assertRaises(mqtt.UnderflowDecodeError, mqtt.decode_varint, buf)
+        bio = BytesIO(a2b_hex('808080'))
+        self.assertRaises(mqtt.UnderflowDecodeError, mqtt.decode_varint, bio)
 
     def test_decode_error_too_big(self):
-        buf = bytearray(a2b_hex('ffffffff'))
-        self.assertRaises(mqtt.DecodeError, mqtt.decode_varint, buf)
+        bio = BytesIO(a2b_hex('ffffffff'))
+        self.assertRaises(mqtt.DecodeError, mqtt.decode_varint, bio)
 
 
 class TestUtf8Codec(unittest.TestCase):
