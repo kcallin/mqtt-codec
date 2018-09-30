@@ -28,6 +28,138 @@ FIELD_U16 = Struct('>H')
 FIELD_PACKET_ID = FIELD_U16
 
 
+class BytesReader(object):
+    def __init__(self, buf):
+        self.__buf = buf
+        self.__num_bytes_consumed = 0
+
+    @property
+    def num_bytes_consumed(self):
+        return self.__num_bytes_consumed
+
+    def read(self, max_bytes=1):
+        if self.__num_bytes_consumed + max_bytes >= len(self.__buf):
+            max_bytes = len(self.__buf) - self.__num_bytes_consumed
+
+        b = self.__buf[self.__num_bytes_consumed:self.__num_bytes_consumed + max_bytes]
+        self.__num_bytes_consumed += max_bytes
+
+        return b
+
+
+class LimitReader(object):
+    def __init__(self, f, limit=None):
+        self.__f = f
+        self.__num_bytes_consumed = 0
+        self.__limit = limit
+
+    @property
+    def limit(self):
+        return self.__limit
+
+    @limit.setter
+    def set_limit(self, value):
+        self.__limit = value
+
+    def read(self, max_bytes=1):
+        if self.limit is None:
+            b = self.__f.read(max_bytes)
+        else:
+            if self.__num_bytes_consumed + max_bytes > self.limit:
+                max_bytes = self.limit - self.__num_bytes_consumed
+            b = self.__f.read(max_bytes)
+        self.__num_bytes_consumed += len(b)
+
+        return b
+
+
+class FileDecoder(object):
+    def __init__(self, f):
+        self.__f = f
+        self.__num_bytes_consumed = 0
+        self.__max_bytes = None
+
+    @property
+    def num_bytes_consumed(self):
+        return self.__num_bytes_consumed
+
+    @property
+    def max_bytes(self):
+        """
+
+        Returns
+        -------
+        int or None
+        """
+        return self.__max_bytes
+
+    def unpack(self, struct):
+        """
+
+        Raises
+        ------
+        UnderflowDecodeError
+            Raised when not enough bytes are available in the buffer to
+            decode the struct.
+
+        Parameters
+        ----------
+        struct: struct.Struct
+
+        Returns
+        -------
+        tuple
+            Tuple of extracted values.
+        """
+        v = struct.unpack(self.read(struct.size))
+        return v
+
+    def unpack_utf8(self):
+        """
+
+        Returns
+        -------
+        int, str
+            Number of bytes consumed, string
+        """
+        num_bytes_consumed, s = decode_utf8(self.__f)
+        self.__num_bytes_consumed += num_bytes_consumed
+        return num_bytes_consumed, s
+
+    def unpack_bytes(self):
+        """
+
+        Returns
+        -------
+        int, bytes
+            Number of bytes consumed, string
+        """
+        num_bytes_consumed, b = decode_bytes(self.__f)
+        self.__num_bytes_consumed += num_bytes_consumed
+        return num_bytes_consumed, b
+
+    def unpack_varint(self, max_bytes):
+        num_bytes_consumed, value = decode_varint(self.__f, max_bytes)
+        self.__num_bytes_consumed += num_bytes_consumed
+        return num_bytes_consumed, value
+
+    def read(self, num_bytes):
+        """
+
+        Returns
+        -------
+        bytes
+            Number of bytes consumed, string
+        """
+        buf = self.__f.read(num_bytes)
+        assert len(buf) <= num_bytes
+        if len(buf) < num_bytes:
+            raise UnderflowDecodeError()
+        self.__num_bytes_consumed += num_bytes
+
+        return buf
+
+
 class CursorBuf(object):
     def __init__(self, buf):
         self.buf = buf
@@ -56,32 +188,6 @@ class CursorBuf(object):
             raise UnderflowDecodeError()
 
         v = struct.unpack(self.view[0:struct.size])
-        self.num_bytes_consumed += struct.size
-        self.view = self.view[struct.size:]
-        return v
-
-    def unpack_from(self, struct):
-        """
-
-        Raises
-        ------
-        UnderflowDecodeError
-            Raised when not enough bytes are available in the buffer to
-            decode the struct.
-
-        Parameters
-        ----------
-        struct: struct.Struct
-
-        Returns
-        -------
-        tuple
-            Tuple of extracted values.
-        """
-        if len(self.view) < struct.size:
-            raise UnderflowDecodeError()
-
-        v = struct.unpack_from(self.view)
         self.num_bytes_consumed += struct.size
         self.view = self.view[struct.size:]
         return v
@@ -425,39 +531,41 @@ class MqttFixedHeader(object):
         self.size = size
 
     @staticmethod
-    def decode(buf):
+    def decode(f):
         """
 
         Parameters
         ----------
-        buf
+        f: file
+            File-like object.
+
+        Raises
+        -------
+        UnderflowDecodeError
+
 
         Returns
         -------
         (num_bytes_consumed: int, MqttFixedHeader)
 
         """
+        decoder = FileDecoder(f)
+        (byte_0,) = decoder.unpack(FIELD_U8)
+
+        packet_type_u4 = (byte_0 >> 4)
+        flags = byte_0 & 0x0f
+
         try:
-            byte_0 = buf[0]
+            packet_type = MqttControlPacketType(packet_type_u4)
+        except ValueError:
+            raise DecodeError('Unknown packet type 0x{:02x}.'.format(packet_type_u4))
 
-            packet_type_byte = (byte_0 >> 4)
-            flags = byte_0 & 0x0f
+        if not are_flags_valid(packet_type, flags):
+            raise DecodeError('Invalid flags for packet type.')
 
-            try:
-                packet_type = MqttControlPacketType(packet_type_byte)
-            except ValueError:
-                raise DecodeError('Unknown packet type 0x{:02x}.'.format(packet_type_byte))
+        num_bytes, num_remaining_bytes = decoder.unpack_varint(4)
 
-            if not are_flags_valid(packet_type, flags):
-                raise DecodeError('Invalid flags for packet type.')
-        except IndexError:
-            raise UnderflowDecodeError()
-
-        num_bytes_consumed = 1
-        num_nrb_bytes, num_remaining_bytes = decode_varint(BytesIO(buf[num_bytes_consumed:]))
-        num_bytes_consumed += num_nrb_bytes
-
-        return num_bytes_consumed, MqttFixedHeader(packet_type, flags, num_remaining_bytes)
+        return decoder.num_bytes_consumed, MqttFixedHeader(packet_type, flags, num_remaining_bytes)
 
     def encode(self, f):
         """
@@ -562,12 +670,13 @@ class MqttPacketBody(MqttFixedHeader):
         raise NotImplementedError()
 
     @classmethod
-    def decode(cls, buf):
+    def decode(cls, f):
         """
 
         Parameters
         ----------
-        buf
+        f: file
+            Object with a read method.
 
         Returns
         -------
@@ -575,8 +684,8 @@ class MqttPacketBody(MqttFixedHeader):
 
         """
 
-        num_header_bytes_consumed, header = MqttFixedHeader.decode(buf)
-        num_body_bytes_consumed, packet = cls.decode_body(header, buf[num_header_bytes_consumed:])
+        num_header_bytes_consumed, header = MqttFixedHeader.decode(f)
+        num_body_bytes_consumed, packet = cls.decode_body(header, f)
         if header.remaining_len != num_body_bytes_consumed:
             params = header.remaining_len, num_body_bytes_consumed
             msg = 'Header remaining length {} not equal to body bytes consumed {}.'.format(*params)
@@ -687,34 +796,30 @@ class MqttConnect(MqttPacketBody):
         return num_bytes_written
 
     @classmethod
-    def decode_body(cls, header, buf):
+    def decode_body(cls, header, f):
         """
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            File-like object.
 
         Returns
         -------
         int
             Number of bytes written to file.
         """
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        connect_header = decoder.read(len(MqttConnect.CONNECT_HEADER))
+        if connect_header != MqttConnect.CONNECT_HEADER:
+            raise DecodeError('Invalid connect packet header.')
 
-        num_bytes_consumed = 0
-        l = len(MqttConnect.CONNECT_HEADER)
-        if buf[0:l] != MqttConnect.CONNECT_HEADER:
-            raise DecodeError()
-        buf = buf[l:]
-        num_bytes_consumed += l
-
-        protocol_level = chr(buf[0])
+        protocol_level = decoder.read(1)
         if protocol_level != MqttConnect.PROTOCOL_LEVEL:
             raise DecodeError('Invalid protocol level {}.'.format(protocol_level))
-        buf = buf[1:]
-        num_bytes_consumed += 1
 
-        flags = buf[0]
+        flags = decoder.unpack(FIELD_U8)[0]
         has_username = bool(flags & 0x80)
         has_password = bool(flags & 0x40)
         has_will = bool(flags & 0x04)
@@ -725,22 +830,14 @@ class MqttConnect(MqttPacketBody):
 
         if zero != 0:
             raise DecodeError()
-        buf = buf[1:]
-        num_bytes_consumed += 1
 
-        keep_alive = (buf[0] << 8) + buf[1]
-        buf = buf[2:]
-        num_bytes_consumed += 2
+        keep_alive = decoder.unpack(FIELD_U16)[0]
 
-        bio = BytesIO(buf)
-        num_str_byes, client_id = decode_utf8(bio)
-        num_bytes_consumed += num_str_byes
+        num_str_byes, client_id = decoder.unpack_utf8()
 
         if has_will:
-            num_str_byes, will_topic = decode_utf8(bio)
-            num_bytes_consumed += num_str_byes
-            num_bytes, will_message = decode_bytes(buf)
-            num_bytes_consumed += num_bytes
+            num_str_byes, will_topic = decoder.unpack_utf8()
+            num_bytes, will_message = decoder.unpack_bytes()
             will = MqttWill(will_qos, will_topic, will_message, will_retained)
         else:
             if will_qos != 0:
@@ -750,19 +847,17 @@ class MqttConnect(MqttPacketBody):
             will = None
 
         if has_username:
-            num_str_byes, username = decode_utf8(bio)
-            num_bytes_consumed += num_str_byes
+            num_str_byes, username = decoder.unpack_utf8()
         else:
             username = None
 
         if has_password:
-            num_str_byes, password = decode_utf8(bio)
-            num_bytes_consumed += num_str_byes
+            num_str_byes, password = decoder.unpack_utf8()
         else:
             password = None
 
         connect = MqttConnect(client_id, clean_session, keep_alive, username, password, will)
-        return num_bytes_consumed, connect
+        return decoder.num_bytes_consumed, connect
 
     def __repr__(self):
         # client_id: str
@@ -836,24 +931,45 @@ class MqttConnack(MqttPacketBody):
         return num_bytes_written
 
     @classmethod
-    def decode_body(cls, header, buf):
-        num_bytes_consumed = 2
-        if len(buf) < num_bytes_consumed:
-            raise UnderflowDecodeError()
+    def decode_body(cls, header, f):
+        """
 
-        if buf[0] == 0:
+        Parameters
+        ----------
+        header: MqttFixedHeader
+        f: file
+            File-like object.
+
+        Raises
+        ------
+        DecodeError
+            When bytes have values incompatible with a MqttConnack
+            packet.
+        UnderflowDecodeError
+            When not enough bytes are available to decode a complete
+            packet.
+
+        Returns
+        -------
+        (num_bytes_consumed: int, packet: MqttConnack)
+        """
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        session_present_u8 = decoder.unpack(FIELD_U8)[0]
+
+        if session_present_u8 == 0:
             session_present = False
-        elif buf[0] == 1:
+        elif session_present_u8 == 1:
             session_present = True
         else:
-            raise DecodeError('Incorrectly encoded session_present flag.')
+            raise DecodeError('Incorrectly encoded session_present flag ({}).'.format(session_present_u8))
 
+        return_code_u8 = decoder.unpack(FIELD_U8)[0]
         try:
-            return_code = ConnackResult(buf[1])
+            return_code = ConnackResult(return_code_u8)
         except ValueError:
-            raise DecodeError("Unrecognized return code.")
+            raise DecodeError("Unrecognized return code {}.".format(return_code_u8))
 
-        return num_bytes_consumed, MqttConnack(session_present, return_code)
+        return decoder.num_bytes_consumed, MqttConnack(session_present, return_code)
 
     def __repr__(self):
         msg = 'MqttConnack(session_present={}, return_code={})'
@@ -921,37 +1037,45 @@ class MqttSubscribe(MqttPacketBody):
         return num_bytes_written
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttSubscribe` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `subscribe`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttSubscribe)
+        (num_bytes_consumed: int, packet: MqttSubscribe)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.subscribe
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_PACKET_ID)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_PACKET_ID)
 
         topics = []
-        while header.remaining_len - cb.num_bytes_consumed > 0:
-            num_str_bytes, name = cb.unpack_utf8()
-            max_qos, = cb.unpack(FIELD_U8)
+        while header.remaining_len > decoder.num_bytes_consumed:
+            num_str_bytes, name = decoder.unpack_utf8()
+            max_qos, = decoder.unpack(FIELD_U8)
             try:
                 sub_topic = MqttTopic(name, max_qos)
             except ValueError:
                 raise DecodeError('Invalid QOS {}'.format(max_qos))
             topics.append(sub_topic)
 
-        assert header.remaining_len - cb.num_bytes_consumed == 0
+        assert header.remaining_len == decoder.num_bytes_consumed
 
-        return cb.num_bytes_consumed, MqttSubscribe(packet_id, topics)
+        return decoder.num_bytes_consumed, MqttSubscribe(packet_id, topics)
 
     def __repr__(self):
         return 'MqttSubscribe(packet_id={}, topics=[{}])'.format(self.packet_id, ', '.join(repr(t) for t in self.topics))
@@ -1052,35 +1176,43 @@ class MqttSuback(MqttPacketBody):
         return num_bytes_written
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttSuback` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `suback`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttSubscribe)
+        (num_bytes_consumed: int, packet: MqttSuback)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.suback
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_PACKET_ID)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_PACKET_ID)
 
         results = []
-        while header.remaining_len - cb.num_bytes_consumed > 0:
-            result, = cb.unpack(FIELD_U8)
+        while header.remaining_len > decoder.num_bytes_consumed:
+            result, = decoder.unpack(FIELD_U8)
             try:
                 results.append(SubscribeResult(result))
             except ValueError:
                 raise DecodeError('Unsupported result {:02x}.'.format(ord(result)))
 
-        assert header.remaining_len - cb.num_bytes_consumed == 0
+        assert header.remaining_len == decoder.num_bytes_consumed
 
-        return cb.num_bytes_consumed, MqttSuback(packet_id, results)
+        return decoder.num_bytes_consumed, MqttSuback(packet_id, results)
 
     def __repr__(self):
         return 'MqttSuback(packet_id={}, results=[{}])'.format(self.packet_id, ', '.join(str(r) for r in self.results))
@@ -1203,17 +1335,25 @@ class MqttPublish(MqttPacketBody):
         return num_bytes_written
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPublish` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `publish`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttSubscribe)
+        (num_bytes_consumed: int, packet: MqttPublish)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.publish
@@ -1227,14 +1367,17 @@ class MqttPublish(MqttPacketBody):
             # [MQTT-3.3.1-2]
             raise DecodeError("Unexpected dupe=True for qos==0 message [MQTT-3.3.1-2].")
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        num_bytes_consumed, topic_name = cb.unpack_utf8()
-        packet_id, = cb.unpack(FIELD_PACKET_ID)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        num_bytes_consumed, topic_name = decoder.unpack_utf8()
+        packet_id, = decoder.unpack(FIELD_PACKET_ID)
 
-        payload_len = header.remaining_len - cb.num_bytes_consumed
-        num_bytes_consumed, payload = cb.unpack_bytes(payload_len)
+        payload_len = header.remaining_len - decoder.num_bytes_consumed
+        payload = decoder.read(payload_len)
 
-        return cb.num_bytes_consumed, MqttPublish(packet_id, topic_name, payload, dupe, qos, retain)
+        if header.remaining_len != decoder.num_bytes_consumed:
+            raise DecodeError('Extra bytes at end of packet.')
+
+        return decoder.num_bytes_consumed, MqttPublish(packet_id, topic_name, payload, dupe, qos, retain)
 
     def __repr__(self):
         msg = 'MqttPublish(packet_id={}, topic={}, payload=0x{}, dupe={}, qos={}, retain={})'
@@ -1269,25 +1412,36 @@ class MqttPuback(MqttPacketBody):
         return f.write(FIELD_U16.pack(self.packet_id))
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPuback` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `puback`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttPuback)
+        (num_bytes_consumed: int, packet: MqttPuback)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.puback
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_U16)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_U16)
 
-        return cb.num_bytes_consumed, MqttPuback(packet_id)
+        if header.remaining_len != decoder.num_bytes_consumed:
+            raise DecodeError('Extra bytes at end of packet.')
+
+        return decoder.num_bytes_consumed, MqttPuback(packet_id)
 
     def __repr__(self):
         msg = 'MqttPuback(packet_id={})'
@@ -1316,25 +1470,36 @@ class MqttPubrec(MqttPacketBody):
         return f.write(FIELD_U16.pack(self.packet_id))
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPubrec` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `pubrec`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttPubrec)
+        (num_bytes_consumed: int, packet: MqttPubrec)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.pubrec
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_U16)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_U16)
 
-        return cb.num_bytes_consumed, MqttPubrec(packet_id)
+        if header.remaining_len != decoder.num_bytes_consumed:
+            raise DecodeError('Extra bytes at end of packet.')
+
+        return decoder.num_bytes_consumed, MqttPubrec(packet_id)
 
     def __repr__(self):
         msg = 'MqttPubrec(packet_id={})'
@@ -1363,25 +1528,36 @@ class MqttPubrel(MqttPacketBody):
         return f.write(FIELD_U16.pack(self.packet_id))
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPubrel` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `pubrel`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttPubrel)
+        (num_bytes_consumed: int, packet: MqttPubrel)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.pubrel
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_U16)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_U16)
 
-        return cb.num_bytes_consumed, MqttPubrel(packet_id)
+        if header.remaining_len != decoder.num_bytes_consumed:
+            raise DecodeError('Extra bytes at end of packet.')
+
+        return decoder.num_bytes_consumed, MqttPubrel(packet_id)
 
     def __repr__(self):
         msg = 'MqttPubrel(packet_id={})'
@@ -1410,25 +1586,36 @@ class MqttPubcomp(MqttPacketBody):
         return f.write(FIELD_U16.pack(self.packet_id))
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPubcomp` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `pubcomp`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttPubcomp)
+        (num_bytes_consumed: int, packet: MqttPubcomp)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.pubcomp
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_U16)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_U16)
 
-        return cb.num_bytes_consumed, MqttPubcomp(packet_id)
+        if header.remaining_len != decoder.num_bytes_consumed:
+            raise DecodeError('Extra bytes at end of packet.')
+
+        return decoder.num_bytes_consumed, MqttPubcomp(packet_id)
 
     def __repr__(self):
         msg = 'MqttPubcomp(packet_id={})'
@@ -1475,32 +1662,40 @@ class MqttUnsubscribe(MqttPacketBody):
         return num_bytes_written
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttUnsubscribe` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `unsubscribe`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttUnsubscribe)
+        (num_bytes_consumed: int, packet: MqttUnsubscribe)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.unsubscribe
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_PACKET_ID)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_PACKET_ID)
 
         topics = []
-        while header.remaining_len - cb.num_bytes_consumed > 0:
-            num_str_bytes, topic = cb.unpack_utf8()
+        while header.remaining_len > decoder.num_bytes_consumed:
+            num_str_bytes, topic = decoder.unpack_utf8()
             topics.append(topic)
 
-        assert header.remaining_len - cb.num_bytes_consumed == 0
+        assert header.remaining_len - decoder.num_bytes_consumed == 0
 
-        return cb.num_bytes_consumed, MqttUnsubscribe(packet_id, topics)
+        return decoder.num_bytes_consumed, MqttUnsubscribe(packet_id, topics)
 
     def __repr__(self):
         return 'MqttUnsubscribe(packet_id={}, topics=[{}])'.format(self.packet_id, ', '.join(self.topics))
@@ -1535,27 +1730,36 @@ class MqttUnsuback(MqttPacketBody):
         return f.write(FIELD_U16.pack(self.packet_id))
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttUnsuback` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `unsuback`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttUnsuback)
+        (num_bytes_consumed: int, packet: MqttUnsuback)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.unsuback
 
-        cb = CursorBuf(buf[0:header.remaining_len])
-        packet_id, = cb.unpack(FIELD_PACKET_ID)
+        decoder = FileDecoder(LimitReader(f, header.remaining_len))
+        packet_id, = decoder.unpack(FIELD_PACKET_ID)
 
-        assert header.remaining_len - cb.num_bytes_consumed == 0
+        if header.remaining_len != decoder.num_bytes_consumed:
+            raise DecodeError('Extra bytes at end of packet.')
 
-        return cb.num_bytes_consumed, MqttUnsuback(packet_id)
+        return decoder.num_bytes_consumed, MqttUnsuback(packet_id)
 
     def __repr__(self):
         return 'MqttUnsuback(packet_id={})'.format(self.packet_id)
@@ -1580,20 +1784,31 @@ class MqttPingreq(MqttPacketBody):
         return 0
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPingreq` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `pingreq`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttPingreq)
+        (num_bytes_consumed: int, packet: MqttPingreq)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.pingreq
+
+        if header.remaining_len != 0:
+            raise DecodeError('Extra bytes at end of packet.')
 
         return 0, MqttPingreq()
 
@@ -1620,20 +1835,31 @@ class MqttPingresp(MqttPacketBody):
         return 0
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttPingresp` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `pingresp`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttPingresp)
+        (num_bytes_consumed: int, packet: MqttPingresp)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.pingresp
+
+        if header.remaining_len != 0:
+            raise DecodeError('Extra bytes at end of packet.')
 
         return 0, MqttPingresp()
 
@@ -1661,20 +1887,31 @@ class MqttDisconnect(MqttPacketBody):
         return 0
 
     @classmethod
-    def decode_body(cls, header, buf):
-        """
+    def decode_body(cls, header, f):
+        """Generates a `MqttDisconnect` packet given a
+        `MqttFixedHeader`.  This method asserts that header.packet_type
+        is `disconnect`.
 
         Parameters
         ----------
         header: MqttFixedHeader
-        buf
+        f: file
+            Object with a read method.
+
+        Raises
+        ------
+        DecodeError
+            When there are extra bytes at the end of the packet.
 
         Returns
         -------
-        (int, MqttDisconnect)
+        (num_bytes_consumed: int, packet: MqttDisconnect)
             Number of bytes written to file.
         """
         assert header.packet_type == MqttControlPacketType.disconnect
+
+        if header.remaining_len != 0:
+            raise DecodeError('Extra bytes at end of packet.')
 
         return 0, MqttDisconnect()
 

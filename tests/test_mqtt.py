@@ -4,25 +4,26 @@ from io import BytesIO
 from struct import Struct
 
 import mqtt_codec as mqtt
+from mqtt_codec import BytesReader
 from binascii import a2b_hex
 
 
 class TestDecodeFixedHeader(unittest.TestCase):
     def test_decode_zero_nrb(self):
         buf = bytearray(a2b_hex('c000'))
-        num_bytes_consumed, h = mqtt.MqttFixedHeader.decode(buf)
+        num_bytes_consumed, h = mqtt.MqttFixedHeader.decode(BytesReader(buf))
         self.assertEqual(h.remaining_len, 0)
         self.assertEqual(2, num_bytes_consumed)
 
     def test_decode_one_nrb(self):
         buf = bytearray(a2b_hex('c001'))
-        num_bytes_consumed, h = mqtt.MqttFixedHeader.decode(buf)
+        num_bytes_consumed, h = mqtt.MqttFixedHeader.decode(BytesReader(buf))
         self.assertEqual(h.remaining_len, 1)
         self.assertEqual(2, num_bytes_consumed)
 
     def test_underflow_0(self):
         buf = ''
-        self.assertRaises(mqtt.UnderflowDecodeError, mqtt.MqttFixedHeader.decode, buf)
+        self.assertRaises(mqtt.UnderflowDecodeError, mqtt.MqttFixedHeader.decode, BytesReader(buf))
 
 
 class TestCodecVarInt(unittest.TestCase):
@@ -114,14 +115,14 @@ class TestConnectCodec(unittest.TestCase):
         self.assertTrue(num_encoded_bytes > 1)
 
         buf = bytearray(bio.getvalue())
-        num_decoded_bytes, actual = mqtt.MqttConnect.decode(buf)
+        num_decoded_bytes, actual = mqtt.MqttConnect.decode(BytesReader(buf))
         self.assertEqual(num_encoded_bytes, num_decoded_bytes)
 
 
 class TestConnackCodec(unittest.TestCase):
     def test_decode(self):
         buf = bytearray(a2b_hex('20020000'))
-        packet = mqtt.MqttConnack.decode(buf)
+        packet = mqtt.MqttConnack.decode(BytesReader(buf))
 
 
 class TestSubscribeCodec(unittest.TestCase):
@@ -133,9 +134,9 @@ class TestSubscribeCodec(unittest.TestCase):
         ])
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttSubscribe.decode(buf)
+        recovered = mqtt.MqttSubscribe.decode(bio)
 
 
 class TestSubackCodec(unittest.TestCase):
@@ -148,9 +149,9 @@ class TestSubackCodec(unittest.TestCase):
         ])
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttSuback.decode(buf)
+        recovered = mqtt.MqttSuback.decode(bio)
 
 
 class TestPublish(unittest.TestCase):
@@ -158,10 +159,10 @@ class TestPublish(unittest.TestCase):
         publish = mqtt.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False)
         bio = BytesIO()
         publish.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        num_bytes_consumed, recovered = mqtt.MqttPublish.decode(buf)
-        self.assertEqual(len(buf), num_bytes_consumed)
+        num_bytes_consumed, recovered = mqtt.MqttPublish.decode(bio)
+        self.assertEqual(len(bio.getvalue()), num_bytes_consumed)
         self.assertEqual(publish.packet_id, recovered.packet_id)
         self.assertEqual(publish.payload, recovered.payload)
 
@@ -171,9 +172,9 @@ class TestPubrec(unittest.TestCase):
         subscribe = mqtt.MqttPubrec(3)
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttPubrec.decode(buf)
+        recovered = mqtt.MqttPubrec.decode(bio)
 
 
 class TestPubrel(unittest.TestCase):
@@ -181,9 +182,9 @@ class TestPubrel(unittest.TestCase):
         subscribe = mqtt.MqttPubrel(3)
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttPubrel.decode(buf)
+        recovered = mqtt.MqttPubrel.decode(bio)
 
 
 class TestPubcomp(unittest.TestCase):
@@ -191,9 +192,9 @@ class TestPubcomp(unittest.TestCase):
         subscribe = mqtt.MqttPubcomp(3)
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttPubcomp.decode(buf)
+        recovered = mqtt.MqttPubcomp.decode(bio)
 
 
 class TestUnsubscribe(unittest.TestCase):
@@ -201,9 +202,9 @@ class TestUnsubscribe(unittest.TestCase):
         subscribe = mqtt.MqttUnsubscribe(3, ['flugelhorn'])
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttUnsubscribe.decode(buf)
+        recovered = mqtt.MqttUnsubscribe.decode(bio)
 
 
 class TestUnsuback(unittest.TestCase):
@@ -211,9 +212,9 @@ class TestUnsuback(unittest.TestCase):
         subscribe = mqtt.MqttUnsuback(3)
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttUnsuback.decode(buf)
+        recovered = mqtt.MqttUnsuback.decode(bio)
 
 
 class TestPingreq(unittest.TestCase):
@@ -221,9 +222,9 @@ class TestPingreq(unittest.TestCase):
         subscribe = mqtt.MqttPingreq()
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttPingreq.decode(buf)
+        recovered = mqtt.MqttPingreq.decode(bio)
 
 
 class TestPingresp(unittest.TestCase):
@@ -231,9 +232,9 @@ class TestPingresp(unittest.TestCase):
         subscribe = mqtt.MqttPingresp()
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttPingresp.decode(buf)
+        recovered = mqtt.MqttPingresp.decode(bio)
 
 
 class TestDisconnect(unittest.TestCase):
@@ -241,9 +242,9 @@ class TestDisconnect(unittest.TestCase):
         subscribe = mqtt.MqttDisconnect()
         bio = BytesIO()
         subscribe.encode(bio)
-        buf = bytearray(bio.getvalue())
+        bio.seek(0)
 
-        recovered = mqtt.MqttDisconnect.decode(buf)
+        recovered = mqtt.MqttDisconnect.decode(bio)
 
 
 class TestDecode(unittest.TestCase):
