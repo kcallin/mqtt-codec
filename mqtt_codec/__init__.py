@@ -33,10 +33,6 @@ class BytesReader(object):
         self.__buf = buf
         self.__num_bytes_consumed = 0
 
-    @property
-    def num_bytes_consumed(self):
-        return self.__num_bytes_consumed
-
     def read(self, max_bytes=1):
         if self.__num_bytes_consumed + max_bytes >= len(self.__buf):
             max_bytes = len(self.__buf) - self.__num_bytes_consumed
@@ -57,10 +53,6 @@ class LimitReader(object):
     def limit(self):
         return self.__limit
 
-    @limit.setter
-    def set_limit(self, value):
-        self.__limit = value
-
     def read(self, max_bytes=1):
         if self.limit is None:
             b = self.__f.read(max_bytes)
@@ -77,21 +69,10 @@ class FileDecoder(object):
     def __init__(self, f):
         self.__f = f
         self.__num_bytes_consumed = 0
-        self.__max_bytes = None
 
     @property
     def num_bytes_consumed(self):
         return self.__num_bytes_consumed
-
-    @property
-    def max_bytes(self):
-        """
-
-        Returns
-        -------
-        int or None
-        """
-        return self.__max_bytes
 
     def unpack(self, struct):
         """
@@ -391,6 +372,12 @@ def decode_bytes(f):
     f: file
         File-like object with read method.
 
+    Raises
+    ------
+    UnderflowDecodeError
+        When the end of stream is encountered before the end of the
+        encoded bytes.
+
     Returns
     -------
     (num_bytes_consumed: int, decoded: bytes)
@@ -468,22 +455,26 @@ class MqttFixedHeader(object):
 
     @staticmethod
     def decode(f):
-        """
+        """Extract a `MqttFixedHeader` from `f`.
 
         Parameters
         ----------
         f: file
-            File-like object.
+            Object with read method.
 
         Raises
         -------
+        DecodeError
+            When bytes decoded have values incompatible with a
+            `MqttFixedHeader` object.
         UnderflowDecodeError
+            When end-of-stream is encountered before the end of the
+            fixed header.
 
 
         Returns
         -------
-        (num_bytes_consumed: int, MqttFixedHeader)
-
+        (num_bytes_consumed: int, packet: MqttFixedHeader)
         """
         decoder = FileDecoder(f)
         (byte_0,) = decoder.unpack(FIELD_U8)
@@ -515,7 +506,6 @@ class MqttFixedHeader(object):
         -------
         int
             Number of bytes written.
-
         """
         try:
             b = (int(self.packet_type) << 4) | self.flags
