@@ -23,6 +23,101 @@ from struct import Struct
 from enum import IntEnum, unique
 
 
+FIELD_U8 = Struct('>B')
+FIELD_U16 = Struct('>H')
+FIELD_PACKET_ID = FIELD_U16
+
+
+class CursorBuf(object):
+    def __init__(self, buf):
+        self.buf = buf
+        self.view = buf
+        self.num_bytes_consumed = 0
+
+    def unpack(self, struct):
+        """
+
+        Raises
+        ------
+        UnderflowDecodeError
+            Raised when not enough bytes are available in the buffer to
+            decode the struct.
+
+        Parameters
+        ----------
+        struct: struct.Struct
+
+        Returns
+        -------
+        tuple
+            Tuple of extracted values.
+        """
+        if len(self.view) < struct.size:
+            raise UnderflowDecodeError()
+
+        v = struct.unpack(self.view[0:struct.size])
+        self.num_bytes_consumed += struct.size
+        self.view = self.view[struct.size:]
+        return v
+
+    def unpack_from(self, struct):
+        """
+
+        Raises
+        ------
+        UnderflowDecodeError
+            Raised when not enough bytes are available in the buffer to
+            decode the struct.
+
+        Parameters
+        ----------
+        struct: struct.Struct
+
+        Returns
+        -------
+        tuple
+            Tuple of extracted values.
+        """
+        if len(self.view) < struct.size:
+            raise UnderflowDecodeError()
+
+        v = struct.unpack_from(self.view)
+        self.num_bytes_consumed += struct.size
+        self.view = self.view[struct.size:]
+        return v
+
+    def unpack_utf8(self):
+        """
+
+        Returns
+        -------
+        int, str
+            Number of bytes consumed, string
+        """
+        with BytesIO(self.view) as f:
+            num_bytes_consumed, s = decode_utf8(f)
+
+        self.num_bytes_consumed += num_bytes_consumed
+        self.view = self.view[num_bytes_consumed:]
+
+        return num_bytes_consumed, s
+
+    def unpack_bytes(self, num_bytes):
+        """
+
+        Returns
+        -------
+        int, str
+            Number of bytes consumed, string
+        """
+        buf = self.view[0:num_bytes]
+
+        self.num_bytes_consumed += num_bytes
+        self.view = self.view[num_bytes:]
+
+        return num_bytes, buf
+
+
 class EncodeError(Exception):
     pass
 
@@ -686,25 +781,6 @@ class MqttConnect(MqttPacketBody):
                           self.will)
 
 
-def decode_bytes_buf(num_bytes_consumed, buf):
-    """
-
-    Parameters
-    ----------
-    buf
-
-    Returns
-    -------
-    (num_bytes_consumed, new_buf, utf8_str)
-    """
-    num_str_bytes, s = decode_bytes(buf)
-
-    buf = buf[num_str_bytes:]
-    num_bytes_consumed += num_str_bytes
-
-    return (num_bytes_consumed, buf, s)
-
-
 @unique
 class ConnackResult(IntEnum):
     accepted = 0
@@ -802,101 +878,6 @@ class MqttTopic(object):
 
     def __repr__(self):
         return 'Topic({}, max_qos={})'.format(repr(self.name), self.max_qos)
-
-
-FIELD_U8 = Struct('>B')
-FIELD_U16 = Struct('>H')
-FIELD_PACKET_ID = FIELD_U16
-
-
-class CursorBuf(object):
-    def __init__(self, buf):
-        self.buf = buf
-        self.view = buf
-        self.num_bytes_consumed = 0
-
-    def unpack(self, struct):
-        """
-
-        Raises
-        ------
-        UnderflowDecodeError
-            Raised when not enough bytes are available in the buffer to
-            decode the struct.
-
-        Parameters
-        ----------
-        struct: struct.Struct
-
-        Returns
-        -------
-        tuple
-            Tuple of extracted values.
-        """
-        if len(self.view) < struct.size:
-            raise UnderflowDecodeError()
-
-        v = struct.unpack(self.view[0:struct.size])
-        self.num_bytes_consumed += struct.size
-        self.view = self.view[struct.size:]
-        return v
-
-    def unpack_from(self, struct):
-        """
-
-        Raises
-        ------
-        UnderflowDecodeError
-            Raised when not enough bytes are available in the buffer to
-            decode the struct.
-
-        Parameters
-        ----------
-        struct: struct.Struct
-
-        Returns
-        -------
-        tuple
-            Tuple of extracted values.
-        """
-        if len(self.view) < struct.size:
-            raise UnderflowDecodeError()
-
-        v = struct.unpack_from(self.view)
-        self.num_bytes_consumed += struct.size
-        self.view = self.view[struct.size:]
-        return v
-
-    def unpack_utf8(self):
-        """
-
-        Returns
-        -------
-        int, str
-            Number of bytes consumed, string
-        """
-        with BytesIO(self.view) as f:
-            num_bytes_consumed, s = decode_utf8(f)
-
-        self.num_bytes_consumed += num_bytes_consumed
-        self.view = self.view[num_bytes_consumed:]
-
-        return num_bytes_consumed, s
-
-    def unpack_bytes(self, num_bytes):
-        """
-
-        Returns
-        -------
-        int, str
-            Number of bytes consumed, string
-        """
-        buf = self.view[0:num_bytes]
-
-        self.num_bytes_consumed += num_bytes
-        self.view = self.view[num_bytes:]
-
-        return num_bytes, buf
 
 
 class MqttSubscribe(MqttPacketBody):
