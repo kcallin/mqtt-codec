@@ -1,5 +1,5 @@
-mqtt\_codec package
-====================
+API Reference
+==============
 
 .. automodule:: mqtt_codec
     :members:

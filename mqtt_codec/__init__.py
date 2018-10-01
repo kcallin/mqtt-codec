@@ -1,18 +1,7 @@
 """
-===================
-MQTT Packet Codecs
-===================
-
-
-.. note:: MQTT decoders should read from files
-          (https://github.com/kcallin/haka-mqtt/issues/1).
-
-
-.. note:: MQTT codecs need to be thoroughly tested to guarantee that in
-          no circumstances will they raise exceptions other than
-          EncodeError, DecodeError, or one of their subclasses
-          (https://github.com/kcallin/haka-mqtt/issues/2).
-
+=====================
+`mqtt_codec` Package
+=====================
 
 """
 
