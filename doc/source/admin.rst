@@ -49,11 +49,11 @@ Verify all tests pass.
 
     OK
 
-Create and push release tag:
+Create, sign, and push release tag:
 
 .. code-block:: bash
 
-    $ git tag 1.3.5
+    $ git tag -s 1.3.5
     $ git push origin 1.3.5
 
 It's a common problem to accidentally forget to commit important
