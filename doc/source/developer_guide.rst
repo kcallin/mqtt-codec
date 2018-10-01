@@ -60,6 +60,7 @@ Contributing Changes
 =====================
 
 .. Adapted from http://wiki.eclipse.org/Development_Resources/Contributing_via_Git#The_Commit_Record
+.. https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work
 
 Minimally, your git commit record must have the following:
 
