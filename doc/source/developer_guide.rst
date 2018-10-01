@@ -2,6 +2,8 @@
 Developer Guide
 ================
 
+The developer's guide is for a person who wants to change and contribute
+changes to `mqtt-codec`.  It builds on information in :doc:`user_guide`.
 
 Uncontrolled Builds
 ====================
@@ -45,6 +47,13 @@ Docstrings
 Python source code is documented according to the the numpy
 documentation standard at
 https://numpydoc.readthedocs.io/en/latest/format.html.
+
+
+Documentation
+==============
+
+The documentation for `mqtt-codec` is created with
+`Sphinx <http://www.sphinx-doc.org/>`_.
 
 
 .. The project will eventually track requirements using a project like

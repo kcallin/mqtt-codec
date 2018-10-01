@@ -7,9 +7,10 @@
 mqtt-codec Package Documentation
 ==================================
 
-The `mqtt-codec` package is an MQTT packet parser.  The library is
-feature complete but test coverage and testing is not yet complete; the
-library is therefore not yet worthy of a 1.0 version (2018-09-30).
+The `mqtt-codec` package is an MQTT packet encoder and decoder (codec).
+The library is feature complete but test coverage and testing is not yet
+complete; the library is therefore not yet worthy of a 1.0 version
+(2018-09-30).
 
 
 Installation
