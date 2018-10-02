@@ -61,12 +61,7 @@ class LimitReader(object):
 
     @property
     def limit(self):
-        """
-
-        Returns
-        -------
-        int or None
-        """
+        """int or None: maximum number of bytes to read from underlying stream."""
         return self.__limit
 
     def read(self, max_bytes=1):
@@ -111,16 +106,18 @@ class FileDecoder(object):
 
     @property
     def num_bytes_consumed(self):
+        """int: number of bytes consumed from underlying stream."""
         return self.__num_bytes_consumed
 
     def unpack(self, struct):
-        """
+        """Read as many bytes as are required to extract struct then
+        unpack and return a tuple of the values.
 
         Raises
         ------
         UnderflowDecodeError
-            Raised when not enough bytes are available in the buffer to
-            decode the struct.
+            Raised when a read failed to extract enough bytes from the
+            underlying stream to extract the bytes.
 
         Parameters
         ----------
@@ -135,30 +132,72 @@ class FileDecoder(object):
         return v
 
     def unpack_utf8(self):
-        """
+        """Decode a utf-8 string encoded as described in MQTT Version
+        3.1.1 section 1.5.3 line 177.  This is a 16-bit unsigned length
+        followed by a utf-8 encoded string.
+
+        Raises
+        ------
+        UnderflowDecodeError
+            Raised when a read failed to extract enough bytes from the
+            underlying stream to decode the string.
+        DecodeError
+            When any code point in the utf-8 string is invalid.
 
         Returns
         -------
-        (num_bytes_consumed: int, value: str)
-            Number of bytes consumed, string
+        int
+            Number of bytes consumed.
+        str
+            A string utf-8 decoded from the underlying stream.
         """
         num_bytes_consumed, s = decode_utf8(self.__f)
         self.__num_bytes_consumed += num_bytes_consumed
         return num_bytes_consumed, s
 
     def unpack_bytes(self):
-        """
+        """Unpack a utf-8 string encoded as described in MQTT Version
+        3.1.1 section 1.5.3 line 177.  This is a 16-bit unsigned length
+        followed by a utf-8 encoded string.
 
         Returns
         -------
-        int, bytes
-            Number of bytes consumed, string
+        int
+            Number of bytes consumed
+        bytes
+            A bytes object extracted from the underlying stream.
         """
         num_bytes_consumed, b = decode_bytes(self.__f)
         self.__num_bytes_consumed += num_bytes_consumed
         return num_bytes_consumed, b
 
     def unpack_varint(self, max_bytes):
+        """Decode variable integer using algorithm similar to that described
+        in MQTT Version 3.1.1 line 297.
+
+        Parameters
+        ----------
+        max_bytes: int or None
+            If a varint cannot be constructed using `max_bytes` or fewer
+            from f then raises a `DecodeError`.  If None then there is no
+            maximum number of bytes.
+
+        Raises
+        -------
+        DecodeError
+            When length is greater than max_bytes.
+        UnderflowDecodeError
+            When file ends before enough bytes can be read to construct the
+            varint.
+
+        Returns
+        -------
+        int
+            Number of bytes consumed.
+        int
+            Value extracted from `f`.
+
+        """
         num_bytes_consumed, value = decode_varint(self.__f, max_bytes)
         self.__num_bytes_consumed += num_bytes_consumed
         return num_bytes_consumed, value
@@ -166,10 +205,21 @@ class FileDecoder(object):
     def read(self, num_bytes):
         """Read `num_bytes` and return them.
 
+        Parameters
+        ----------
+        num_bytes : int
+            Number of bytes to extract from the underlying stream.
+
+        Raises
+        ------
+        UnderflowDecodeError
+            Raised when a read failed to extract enough bytes from the
+            underlying stream to extract the bytes.
+
         Returns
         -------
         bytes
-            Number of bytes consumed, string
+            A bytes object extracted from underlying stream.
         """
         buf = self.__f.read(num_bytes)
         assert len(buf) <= num_bytes
@@ -275,7 +325,10 @@ def decode_varint(f, max_bytes=4):
 
     Returns
     -------
-    (num_bytes_consumed: int, v: int)
+    int
+        Number of bytes consumed.
+    int
+        Value extracted from `f`.
 
     """
     num_bytes_consumed = 0
@@ -344,9 +397,19 @@ def decode_utf8(f):
     f: file
         File-like object with read method.
 
+    Raises
+    ------
+    UnderflowDecodeError
+        Raised when a read failed to extract enough bytes from the
+        underlying stream to decode the string.
+    DecodeError
+        When any code point in the utf-8 string is invalid.
+
     Returns
     -------
-    (num_bytes_consumed: int, decoded: str)
+    (num_bytes_consumed: int, value: str)
+        A 2-tuple containing the number of bytes consumed and a str
+        object.
     """
     decode = codecs.getdecoder('utf8')
 
@@ -453,6 +516,14 @@ def encode_bytes(src_buf, dst_buf):
 
 class MqttFixedHeader(object):
     """
+    Parameters
+    ----------
+    packet_type: MqttControlPacketType
+    flags: int
+        An assert statement verifies
+        that are_flags_valid(packet_type, flags) is True.
+    remaining_len: int
+
 
     See MQTT Version 3.1.1 section 2.2 Fixed Header (line 233).
 
@@ -467,16 +538,6 @@ class MqttFixedHeader(object):
     +--------+-------------------------------+
     """
     def __init__(self, packet_type, flags, remaining_len):
-        """
-
-        Parameters
-        ----------
-        packet_type: MqttControlPacketType
-        flags: int
-            An assert statement verifies
-            that are_flags_valid(packet_type, flags) is True.
-        remaining_len: int
-        """
         self.packet_type = packet_type
 
         assert are_flags_valid(packet_type, flags)
@@ -513,7 +574,10 @@ class MqttFixedHeader(object):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttFixedHeader)
+        int
+            Number of bytes consumed from `f`.
+        MqttFixedHeader
+            Header object extracted from `f`.
         """
         decoder = FileDecoder(f)
         (byte_0,) = decoder.unpack(FIELD_U8)
@@ -571,17 +635,18 @@ class MqttFixedHeader(object):
 
 
 class MqttWill(object):
-    def __init__(self, qos, topic, message, retain):
-        """
+    """
 
-        Parameters
-        ----------
-        qos: int
-            0 <= qos <= 2
-        topic: str
-        message: bytes
-        retain: bool
-        """
+    Parameters
+    ----------
+    qos: int
+        0 <= qos <= 2
+    topic: str
+    message: bytes
+    retain: bool
+    """
+
+    def __init__(self, qos, topic, message, retain):
         self.qos = qos
         self.topic = topic
         self.message = message
@@ -605,16 +670,16 @@ class MqttWill(object):
 
 
 class MqttPacketBody(MqttFixedHeader):
+    """
+
+    Parameters
+    ----------
+    packet_type: MqttControlPacketType
+    flags: int
+        Flags 0 <= flags <= 2**8-1.
+    """
+
     def __init__(self, packet_type, flags):
-        """
-
-        Parameters
-        ----------
-        packet_type: MqttControlPacketType
-        flags: int
-            Flags 0 <= flags <= 2**8-1.
-        """
-
         bio = BytesIO()
         self.encode_body(bio)
         num_body_bytes = len(bio.getvalue())
@@ -645,8 +710,10 @@ class MqttPacketBody(MqttFixedHeader):
 
         Returns
         -------
-        (num_bytes_consumed: int, MqttFixedHeader)
-
+        int
+            Number of bytes consumed from `f`.
+        MqttFixedHeader
+            Header object extracted from `f`.
         """
 
         num_header_bytes_consumed, header = MqttFixedHeader.decode(f)
@@ -661,21 +728,21 @@ class MqttPacketBody(MqttFixedHeader):
 
 
 class MqttConnect(MqttPacketBody):
+    """
+
+    Parameters
+    ----------
+    client_id: str
+    clean_session: bool
+    keep_alive: int
+    username: str or None
+    password: str or None
+    will: MqttWill or None
+    """
     CONNECT_HEADER = b'\x00\x04MQTT'
     PROTOCOL_LEVEL = b'\x04'
 
     def __init__(self, client_id, clean_session, keep_alive, username=None, password=None, will=None):
-        """
-
-        Parameters
-        ----------
-        client_id: str
-        clean_session: bool
-        keep_alive: int
-        username: str or None
-        password: str or None
-        will: MqttWill
-        """
         self.client_id = client_id
         self.username = username
         self.password = password
@@ -729,15 +796,15 @@ class MqttConnect(MqttPacketBody):
 
     def encode_body(self, f):
         """
-
         Parameters
         ----------
-        f
+        f: file
+            File-like object with a write method.
 
         Returns
         -------
         int
-            Number of bytes written to file.
+            Number of bytes written to `f`.
         """
         num_bytes_written = 0
         num_bytes_written += self.__encode_name(f)
@@ -768,12 +835,14 @@ class MqttConnect(MqttPacketBody):
         ----------
         header: MqttFixedHeader
         f: file
-            File-like object.
+            File-like object with a read method.
 
         Returns
         -------
         int
-            Number of bytes written to file.
+            Number of bytes consumed from `f`.
+        MqttConnect
+            Connect object extracted from `f`.
         """
         decoder = FileDecoder(LimitReader(f, header.remaining_len))
         connect_header = decoder.read(len(MqttConnect.CONNECT_HEADER))
@@ -852,16 +921,17 @@ class ConnackResult(IntEnum):
 
 
 class MqttConnack(MqttPacketBody):
-    def __init__(self, session_present, return_code):
-        """
+    """
 
-        Parameters
-        ----------
-        session_present: bool
-            Session present.
-        return_code: ConnackResult
-            Connack return code [Line 709 mqtt]
-        """
+    Parameters
+    ----------
+    session_present: bool
+        Session present.
+    return_code: ConnackResult
+        Connack return code [Line 709 mqtt]
+    """
+
+    def __init__(self, session_present, return_code):
         assert 0 <= return_code <= 255
         assert isinstance(session_present, bool)
         assert isinstance(return_code, ConnackResult)
@@ -876,7 +946,8 @@ class MqttConnack(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -903,7 +974,7 @@ class MqttConnack(MqttPacketBody):
         ----------
         header: MqttFixedHeader
         f: file
-            File-like object.
+            Object with a read method.
 
         Raises
         ------
@@ -916,7 +987,10 @@ class MqttConnack(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttConnack)
+        int
+            Number of bytes consumed from `f`.
+        MqttConnack
+            Connack object extracted from `f`.
         """
         decoder = FileDecoder(LimitReader(f, header.remaining_len))
         session_present_u8 = decoder.unpack(FIELD_U8)[0]
@@ -942,15 +1016,16 @@ class MqttConnack(MqttPacketBody):
 
 
 class MqttTopic(object):
+    """
+
+    Parameters
+    ----------
+    name: str
+    max_qos: int
+
+    """
+
     def __init__(self, name, max_qos):
-        """
-
-        Parameters
-        ----------
-        name: str
-        max_qos: int
-
-        """
         if not 0 <= max_qos <= 2:
             raise ValueError('Invalid QOS.')
 
@@ -962,15 +1037,16 @@ class MqttTopic(object):
 
 
 class MqttSubscribe(MqttPacketBody):
-    def __init__(self, packet_id, topics):
-        """
+    """
 
-        Parameters
-        ----------
-        packet_id: int
-            0 <= packet_id <= 2**16-1
-        topics: iterable of MqttTopic
-        """
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16-1
+    topics: iterable of MqttTopic
+    """
+
+    def __init__(self, packet_id, topics):
         self.packet_id = packet_id
         self.topics = tuple(topics)
 
@@ -986,7 +1062,8 @@ class MqttSubscribe(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1020,8 +1097,10 @@ class MqttSubscribe(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttSubscribe)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttSubscribe
+            Subscribe object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.subscribe
 
@@ -1088,22 +1167,15 @@ class SubscribeResult(IntEnum):
 
 class MqttSuback(MqttPacketBody):
     """
-    Attributes
+    Parameters
     ----------
     packet_id: int
-        Packet id such that 0 <= packet_id <= 2**16-1.
-    results:
-        List of return codes specifying the maximum QoS level that was
-        granted in each or fail if the subscription failed.
+        0 <= packet_id <= 2**16-1
+    results: iterable of SubscribeResult
     """
     def __init__(self, packet_id, results):
         """
 
-        Parameters
-        ----------
-        packet_id: int
-            0 <= packet_id <= 2**16-1
-        results: iterable of SubscribeResult
         """
         self.__packet_id = packet_id
         self.__results = tuple(results)
@@ -1115,10 +1187,15 @@ class MqttSuback(MqttPacketBody):
 
     @property
     def packet_id(self):
+        """int: packet_id such that 0 <= packet_id <= 2**16-1."""
         return self.__packet_id
 
     @property
     def results(self):
+        """tuple of SubscribeResult:
+            Tuple of return codes specifying the maximum QoS level that was
+            granted in each or fail if the subscription failed.
+        """
         return self.__results
 
     def encode_body(self, f):
@@ -1126,7 +1203,8 @@ class MqttSuback(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1159,8 +1237,10 @@ class MqttSuback(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttSuback)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttSuback
+            Suback object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.suback
 
@@ -1185,6 +1265,37 @@ class MqttSuback(MqttPacketBody):
 
 class MqttPublish(MqttPacketBody):
     """Represents a mqtt publish packet.
+
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16 -1
+    topic: str
+    payload: bytes
+    dupe: bool
+        Represents the DUP flag as described by the MQTT
+        specification:
+
+            If the DUP flag is set to 0, it indicates that this is the
+            first occasion that the Client or Server has attempted to
+            send this MQTT PUBLISH Packet. If the DUP flag is set to 1,
+            it indicates that this might be re-delivery of an earlier
+            attempt to send the Packet.
+
+            The DUP flag MUST be set to 1 by the Client or Server when
+            it attempts to re-deliver a PUBLISH Packet [MQTT-3.3.1-1].
+            The DUP flag MUST be set to 0 for all QoS 0 messages
+            [MQTT-3.3.1-2].
+
+            The value of the DUP flag from an incoming PUBLISH packet is
+            not propagated when the PUBLISH Packet is sent to
+            subscribers by the Server. The DUP flag in the outgoing
+            PUBLISH packet is set independently to the incoming PUBLISH
+            packet, its value MUST be determined solely by whether the
+            outgoing PUBLISH packet is a retransmission [MQTT-3.3.1-3].
+    qos: int
+        0 <= qos <= 2
+    retain: bool
 
     Attributes
     ----------
@@ -1219,39 +1330,6 @@ class MqttPublish(MqttPacketBody):
     """
 
     def __init__(self, packet_id, topic, payload, dupe, qos, retain):
-        """Creates a new publish object.
-
-        Parameters
-        ----------
-        packet_id: int
-            0 <= packet_id <= 2**16 -1
-        topic: str
-        payload: bytes
-        dupe: bool
-            Represents the DUP flag as described by the MQTT
-            specification:
-
-                If the DUP flag is set to 0, it indicates that this is the
-                first occasion that the Client or Server has attempted to
-                send this MQTT PUBLISH Packet. If the DUP flag is set to 1,
-                it indicates that this might be re-delivery of an earlier
-                attempt to send the Packet.
-
-                The DUP flag MUST be set to 1 by the Client or Server when
-                it attempts to re-deliver a PUBLISH Packet [MQTT-3.3.1-1].
-                The DUP flag MUST be set to 0 for all QoS 0 messages
-                [MQTT-3.3.1-2].
-
-                The value of the DUP flag from an incoming PUBLISH packet is
-                not propagated when the PUBLISH Packet is sent to
-                subscribers by the Server. The DUP flag in the outgoing
-                PUBLISH packet is set independently to the incoming PUBLISH
-                packet, its value MUST be determined solely by whether the
-                outgoing PUBLISH packet is a retransmission [MQTT-3.3.1-3].
-        qos: int
-            0 <= qos <= 2
-        retain: bool
-        """
         assert 0 <= packet_id <= 2**16 - 1
         assert 0 <= qos <= 2
         assert isinstance(dupe, bool)
@@ -1284,7 +1362,8 @@ class MqttPublish(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1366,7 +1445,8 @@ class MqttPuback(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1395,8 +1475,10 @@ class MqttPuback(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPuback)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttPuback
+            MqttPuback object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.puback
 
@@ -1424,7 +1506,8 @@ class MqttPubrec(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1453,8 +1536,10 @@ class MqttPubrec(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPubrec)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttPubrec
+            MqttPubrec object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.pubrec
 
@@ -1482,7 +1567,8 @@ class MqttPubrel(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1511,8 +1597,10 @@ class MqttPubrel(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPubrel)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttPubrel
+            MqttPubrel object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.pubrel
 
@@ -1531,16 +1619,25 @@ class MqttPubrel(MqttPacketBody):
 
 class MqttPubcomp(MqttPacketBody):
     def __init__(self, packet_id):
-        self.packet_id = packet_id
+        assert isinstance(packet_id, int)
+        assert 0 <= packet_id <= 2**16-1
+
+        self.__packet_id = packet_id
 
         MqttPacketBody.__init__(self, MqttControlPacketType.pubcomp, 0)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1569,8 +1666,10 @@ class MqttPubcomp(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPubcomp)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttPubcomp
+            MqttPubcomp object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.pubcomp
 
@@ -1612,7 +1711,8 @@ class MqttUnsubscribe(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1645,8 +1745,10 @@ class MqttUnsubscribe(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttUnsubscribe)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttUnsubscribe
+            MqttUnsubscribe object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.unsubscribe
 
@@ -1685,7 +1787,8 @@ class MqttUnsuback(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1713,8 +1816,10 @@ class MqttUnsuback(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttUnsuback)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttUnsuback
+            MqttUnsuback object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.unsuback
 
@@ -1739,7 +1844,8 @@ class MqttPingreq(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1767,8 +1873,10 @@ class MqttPingreq(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPingreq)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttPingreq
+            MqttPingreq object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.pingreq
 
@@ -1790,7 +1898,8 @@ class MqttPingresp(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1818,8 +1927,10 @@ class MqttPingresp(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPingresp)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttPingresp
+            MqttPingresp object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.pingresp
 
@@ -1832,7 +1943,6 @@ class MqttPingresp(MqttPacketBody):
         return 'MqttPingresp()'
 
 
-
 class MqttDisconnect(MqttPacketBody):
     def __init__(self):
         MqttPacketBody.__init__(self, MqttControlPacketType.disconnect, 0)
@@ -1842,7 +1952,8 @@ class MqttDisconnect(MqttPacketBody):
 
         Parameters
         ----------
-        f
+        f: file
+            File-like object with write method.
 
         Returns
         -------
@@ -1870,8 +1981,10 @@ class MqttDisconnect(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttDisconnect)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from `f`.
+        MqttDisconnect
+            MqttDisconnect object extracted from `f`.
         """
         assert header.packet_type == MqttControlPacketType.disconnect
 
