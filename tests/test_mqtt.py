@@ -106,145 +106,105 @@ class TestUtf8Codec(unittest.TestCase):
                 pass
 
 
-class TestConnectCodec(unittest.TestCase):
-    def test_codec(self):
-        c = mqtt.MqttConnect('client_id', False, 0)
+class CodecHelper(unittest.TestCase):
+    def buffer_packet(self, p):
         bio = BytesIO()
+        try:
+            num_encoded_bytes = p.encode(bio)
+            buf = bio.getvalue()
+            self.assertEqual(num_encoded_bytes, len(buf))
+        finally:
+            bio.close()
 
-        num_encoded_bytes = c.encode(bio)
-        self.assertTrue(num_encoded_bytes > 1)
+        return buf
 
-        buf = bytearray(bio.getvalue())
-        num_decoded_bytes, actual = mqtt.MqttConnect.decode(BytesReader(buf))
-        self.assertEqual(num_encoded_bytes, num_decoded_bytes)
+    def assert_codec_okay(self, p, expected_bytes_hex=None):
+        buf = self.buffer_packet(p)
+        num_decoded_bytes, decoded_p = p.decode(BytesReader(buf))
+
+        if expected_bytes_hex:
+            expected_bytes = a2b_hex(expected_bytes_hex)
+            self.assertEqual(expected_bytes, buf)
+
+        self.assertEqual(num_decoded_bytes, len(buf))
+        self.assertEqual(p, decoded_p)
 
 
-class TestConnackCodec(unittest.TestCase):
+class TestConnectCodec(CodecHelper, unittest.TestCase):
+    def test_basic_connect(self):
+        self.assert_codec_okay(mqtt.MqttConnect('client_id', False, 0))
+
+    def test_full_connect(self):
+        self.assert_codec_okay(mqtt.MqttConnect('client_id', False, 0, will=mqtt.MqttWill(0, 'hello', 'message', True)))
+
+
+class TestConnackCodec(CodecHelper, unittest.TestCase):
     def test_decode(self):
-        buf = bytearray(a2b_hex('20020000'))
-        packet = mqtt.MqttConnack.decode(BytesReader(buf))
+        self.assert_codec_okay(mqtt.MqttConnack(False, mqtt.ConnackResult.accepted), '20020000')
 
 
-class TestSubscribeCodec(unittest.TestCase):
+class TestSubscribeCodec(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttSubscribe(7, [
-            mqtt.MqttTopic('hello', 0),
-            mqtt.MqttTopic('x', 1),
-            mqtt.MqttTopic('Z', 2),
-        ])
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttSubscribe.decode(bio)
+        self.assert_codec_okay(mqtt.MqttSubscribe(7, [
+            mqtt.MqttTopic(u'hello', 0),
+            mqtt.MqttTopic(u'x', 1),
+            mqtt.MqttTopic(u'Z', 2),
+        ]))
 
 
-class TestSubackCodec(unittest.TestCase):
+class TestSubackCodec(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttSuback(3, [
+        self.assert_codec_okay(mqtt.MqttSuback(3, [
             mqtt.SubscribeResult.qos0,
             mqtt.SubscribeResult.qos1,
             mqtt.SubscribeResult.qos2,
             mqtt.SubscribeResult.fail,
-        ])
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttSuback.decode(bio)
+        ]))
 
 
-class TestPublish(unittest.TestCase):
+class TestPublish(CodecHelper, unittest.TestCase):
     def test_publish(self):
-        publish = mqtt.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False)
-        bio = BytesIO()
-        publish.encode(bio)
-        bio.seek(0)
-
-        num_bytes_consumed, recovered = mqtt.MqttPublish.decode(bio)
-        self.assertEqual(len(bio.getvalue()), num_bytes_consumed)
-        self.assertEqual(publish.packet_id, recovered.packet_id)
-        self.assertEqual(publish.payload, recovered.payload)
+        self.assert_codec_okay(mqtt.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False))
 
 
-class TestPubrec(unittest.TestCase):
+class TestPubrec(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttPubrec(3)
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttPubrec.decode(bio)
+        self.assert_codec_okay(mqtt.MqttPubrec(3))
 
 
-class TestPubrel(unittest.TestCase):
+class TestPubrel(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttPubrel(3)
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttPubrel.decode(bio)
+        self.assert_codec_okay(mqtt.MqttPubrel(3))
 
 
-class TestPubcomp(unittest.TestCase):
+class TestPubcomp(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttPubcomp(3)
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttPubcomp.decode(bio)
+        self.assert_codec_okay(mqtt.MqttPubcomp(3))
 
 
-class TestUnsubscribe(unittest.TestCase):
+class TestUnsubscribe(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttUnsubscribe(3, ['flugelhorn'])
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttUnsubscribe.decode(bio)
+        self.assert_codec_okay(mqtt.MqttUnsubscribe(3, ['flugelhorn']))
 
 
-class TestUnsuback(unittest.TestCase):
+class TestUnsuback(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttUnsuback(3)
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttUnsuback.decode(bio)
+        self.assert_codec_okay(mqtt.MqttUnsuback(3))
 
 
-class TestPingreq(unittest.TestCase):
+class TestPingreq(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttPingreq()
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttPingreq.decode(bio)
+        self.assert_codec_okay(mqtt.MqttPingreq())
 
 
-class TestPingresp(unittest.TestCase):
+class TestPingresp(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttPingresp()
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttPingresp.decode(bio)
+        self.assert_codec_okay(mqtt.MqttPingresp())
 
 
-class TestDisconnect(unittest.TestCase):
+class TestDisconnect(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
-        subscribe = mqtt.MqttDisconnect()
-        bio = BytesIO()
-        subscribe.encode(bio)
-        bio.seek(0)
-
-        recovered = mqtt.MqttDisconnect.decode(bio)
+        self.assert_codec_okay(mqtt.MqttDisconnect())
 
 
 class TestDecode(unittest.TestCase):

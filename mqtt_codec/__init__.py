@@ -482,7 +482,10 @@ def decode_bytes(f):
 
     Returns
     -------
-    (num_bytes_consumed: int, decoded: bytes)
+    int
+        Number of bytes read from `f`.
+    bytes
+        Value bytes decoded from `f`.
     """
 
     buf = f.read(FIELD_U16.size)
@@ -499,17 +502,30 @@ def decode_bytes(f):
     return num_bytes_consumed, buf
 
 
-def encode_bytes(src_buf, dst_buf):
+def encode_bytes(src_buf, dst_file):
+    """Encode a buffer length followed by the bytes of the buffer
+    itself.
+    
+    Parameters
+    ----------
+    src_buf: bytes
+        Source bytes to be encoded.  Function asserts that
+        0 <= len(src_buf) <= 2**16-1.
+    dst_file: file
+        File-like object with write method.
+
+    Returns
+    -------
+    int
+        Number of bytes written to `dst_file`.
+    """
     len_src_buf = len(src_buf)
     assert 0 <= len_src_buf <= 2**16-1
     num_written_bytes = len_src_buf + 2
 
-    if len(dst_buf) < num_written_bytes:
-        raise OverflowEncodeError()
-
-    dst_buf[2:num_written_bytes] = src_buf
-    dst_buf[0] = (len_src_buf & 0xff00) >> 8
-    dst_buf[1] = (len_src_buf & 0x00ff)
+    len_buf = FIELD_U16.pack(len_src_buf)
+    dst_file.write(len_buf)
+    dst_file.write(src_buf)
 
     return num_written_bytes
 
@@ -1035,6 +1051,13 @@ class MqttTopic(object):
     def __repr__(self):
         return 'Topic({}, max_qos={})'.format(repr(self.name), self.max_qos)
 
+    def __eq__(self, other):
+        return (
+            hasattr(other, 'name')
+            and self.name == other.name
+            and hasattr(other, 'max_qos')
+            and self.max_qos == other.max_qos
+        )
 
 class MqttSubscribe(MqttPacketBody):
     """
@@ -1126,10 +1149,15 @@ class MqttSubscribe(MqttPacketBody):
 
     def __eq__(self, other):
         return (
-            self.packet_type == other.packet_type
+            hasattr(other, 'packet_type')
+            and self.packet_type == other.packet_type
+            and hasattr(other, 'flags')
             and self.flags == other.flags
+            and hasattr(other, 'remaining_len')
             and self.remaining_len == other.remaining_len
+            and hasattr(other, 'packet_id')
             and self.packet_id == other.packet_id
+            and hasattr(other, 'topics')
             and self.topics == other.topics
         )
 
