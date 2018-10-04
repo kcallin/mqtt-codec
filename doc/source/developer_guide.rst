@@ -15,25 +15,25 @@ Uncontrolled source builds are created in the standard python fashion:
     $ python setup.py sdist
     running sdist
     running egg_info
-    writing requirements to haka_mqtt.egg-info/requires.txt
-    writing haka_mqtt.egg-info/PKG-INFO
-    writing top-level names to haka_mqtt.egg-info/top_level.txt
-    writing dependency_links to haka_mqtt.egg-info/dependency_links.txt
-    reading manifest file 'haka_mqtt.egg-info/SOURCES.txt'
-    writing manifest file 'haka_mqtt.egg-info/SOURCES.txt'
+    writing requirements to mqtt_codec.egg-info/requires.txt
+    writing mqtt_codec.egg-info/PKG-INFO
+    writing top-level names to mqtt_codec.egg-info/top_level.txt
+    writing dependency_links to mqtt_codec.egg-info/dependency_links.txt
+    reading manifest file 'mqtt_codec.egg-info/SOURCES.txt'
+    writing manifest file 'mqtt_codec.egg-info/SOURCES.txt'
     running check
-    creating haka-mqtt-0.1.0-uncontrolled-20180907
-    creating haka-mqtt-0.1.0-uncontrolled-20180907/haka_mqtt
-    creating haka-mqtt-0.1.0-uncontrolled-20180907/haka_mqtt.egg-info
+    creating mqtt-codec-0.1.0-uncontrolled-20180907
+    creating mqtt-codec-0.1.0-uncontrolled-20180907/mqtt_codec
+    creating mqtt-codec-0.1.0-uncontrolled-20180907/mqtt_codec.egg-info
     [... removed for brevity ...]
-    copying tests/test_reactor.py -> haka-mqtt-0.1.0-uncontrolled-20180907/tests
-    copying tests/test_scheduler.py -> haka-mqtt-0.1.0-uncontrolled-20180907/tests
-    Writing haka-mqtt-0.1.0-uncontrolled-20180907/setup.cfg
+    copying tests/test_reactor.py -> mqtt-codec-0.1.0-uncontrolled-20180907/tests
+    copying tests/test_scheduler.py -> mqtt-codec-0.1.0-uncontrolled-20180907/tests
+    Writing mqtt-codec-0.1.0-uncontrolled-20180907/setup.cfg
     creating dist
     Creating tar archive
-    removing 'haka-mqtt-0.1.0-uncontrolled-20180907' (and everything under it)
+    removing 'mqtt-codec-0.1.0-uncontrolled-20180907' (and everything under it)
     $ ls dist
-    haka-mqtt-0.1.0-uncontrolled-20180907.tar.gz
+    mqtt-codec-0.1.0-uncontrolled-20180907.tar.gz
     $
 
 The output artifact has the word "uncontrolled" along with a build date

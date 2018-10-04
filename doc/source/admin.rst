@@ -67,12 +67,12 @@ changes.  To combat this:
 .. code-block:: bash
 
     $ work_dir="$(pwd)"
-    $ tmp_dir=$(mktemp mqtt-codec)
-    $ cd "${tmp_dir}"
-    $ git clone git@github.com:kcallin/mqtt-codec.git
+    $ temp_dir="$(mktemp -d --suffix=-mqtt-codec)"
+    $ cd "${temp_dir}"
+    $ git clone git@github.com:kcallin/mqtt-codec.git .
     $ git checkout <release-tag>
     $ python setup.py test
-    $ diff -u "${work_dir}" "${tmp_dir}"
+    $ diff -ur -x .git -x '*.pyc' "${work_dir}" "${temp_dir}/mqtt-codec"
 
 Create release build artifacts.
 
@@ -81,23 +81,23 @@ Create release build artifacts.
     $ python setup.py egg_info -D -b '' sdist
     running sdist
     running egg_info
-    writing requirements to haka_mqtt.egg-info/requires.txt
-    writing haka_mqtt.egg-info/PKG-INFO
-    writing top-level names to haka_mqtt.egg-info/top_level.txt
-    writing dependency_links to haka_mqtt.egg-info/dependency_links.txt
-    reading manifest file 'haka_mqtt.egg-info/SOURCES.txt'
-    writing manifest file 'haka_mqtt.egg-info/SOURCES.txt'
+    writing requirements to mqtt_codec.egg-info/requires.txt
+    writing mqtt_codec.egg-info/PKG-INFO
+    writing top-level names to mqtt_codec.egg-info/top_level.txt
+    writing dependency_links to mqtt_codec.egg-info/dependency_links.txt
+    reading manifest file 'mqtt_codec.egg-info/SOURCES.txt'
+    writing manifest file 'mqtt_codec.egg-info/SOURCES.txt'
     running check
-    creating haka-mqtt-0.1.2
-    creating haka-mqtt-0.1.2/haka_mqtt
+    creating mqtt-codec-0.1.2
+    creating mqtt-codec-0.1.2/mqtt_codec
     [... removed for brevity ...]
-    copying tests/test_reactor.py -> haka-mqtt-0.1.2/tests
-    copying tests/test_scheduler.py -> haka-mqtt-0.1.2/tests
-    Writing haka-mqtt-0.1.2/setup.cfg
+    copying tests/test_reactor.py -> mqtt-codec-0.1.2/tests
+    copying tests/test_scheduler.py -> mqtt-codec-0.1.2/tests
+    Writing mqtt-codec-0.1.2/setup.cfg
     Creating tar archive
-    removing 'haka-mqtt-0.1.2' (and everything under it)
+    removing 'mqtt-codec-0.1.2' (and everything under it)
     $ ls dist
-    haka-mqtt-0.1.2.tar.gz
+    mqtt-codec-0.1.2.tar.gz
     $
 
 Distribute Release
@@ -107,7 +107,7 @@ GPG signatures are created for release artifacts.
 
 .. code-block:: none
 
-    $ gpg --detach-sign -a dist/haka-mqtt-0.1.2.tar.gz
+    $ gpg --detach-sign -a dist/mqtt-codec-0.1.2.tar.gz
 
     You need a passphrase to unlock the secret key for
     user: "Keegan Callin <kc@kcallin.net>"
@@ -115,9 +115,9 @@ GPG signatures are created for release artifacts.
 
     gpg: gpg-agent is not available in this session
     $ ls dist
-    haka-mqtt-0.1.2.tar.gz  haka-mqtt-0.1.2.tar.gz.asc
-    $ gpg --verify dist/haka-mqtt-0.1.2.tar.gz.asc
-    gpg: assuming signed data in `dist/haka-mqtt-0.1.2.tar.gz'
+    mqtt-codec-0.1.2.tar.gz  mqtt-codec-0.1.2.tar.gz.asc
+    $ gpg --verify dist/mqtt-codec-0.1.2.tar.gz.asc
+    gpg: assuming signed data in `dist/mqtt-codec-0.1.2.tar.gz'
     gpg: Signature made Sat 01 Sep 2018 11:00:31 AM MDT using RSA key ID DD53792F
     gpg: Good signature from "Keegan Callin <kc@kcallin.net>" [ultimate]
     Primary key fingerprint: BD51 01F1 9699 A719 E563  6D85 4A4A 7B98 14BC 2EFF
@@ -132,7 +132,7 @@ Release artifacts are uploaded to **TEST** PyPI.
     Uploading distributions to https://test.pypi.org/legacy/
     Enter your username: kc
     Enter your password:
-    Uploading haka-mqtt-0.1.2.tar.gz
+    Uploading mqtt-codec-0.1.2.tar.gz
     $
 
 
@@ -150,10 +150,19 @@ forever.  A checklist to help verify the PyPI release page follows:
 
 After the checklist is complete then it is time to upload to **real**
 PyPI and verify that the release is complete.  There is no undoing
-this operation.  Think Carefully.
+this operation.  Think Carefully.  The access credentials in `~/.pypirc`
+contains the username/password that twine uses for PyPI.
 
 .. code-block:: none
 
+    $ cat ~/.pypirc
+    [distutils]
+    index-servers =
+        pypi
+
+    [pypi]
+    username:<XXXXXX>
+    password:<XXXXXX>
     $ twine upload dist/*
 
 
