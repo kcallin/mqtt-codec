@@ -53,8 +53,8 @@ Create, sign, and push release tag:
 
 .. code-block:: bash
 
-    $ git tag -s 1.3.5
-    $ git push origin 1.3.5
+    $ git tag -s v0.1.0
+    $ git push origin v0.1.0
 
 It's a common problem to accidentally forget to commit important
 changes.  To combat this:
