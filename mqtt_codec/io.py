@@ -254,15 +254,16 @@ class OverflowEncodeError(EncodeError):
 
 
 class FileDecoder(object):
-    def __init__(self, f):
-        """Creates an object that extracts values from the file-like
-        object `f`.
+    """Creates an object that extracts values from the file-like
+    object `f`.
 
-        Parameters
-        ----------
-        f: file
-            Object with read method.
-        """
+    Parameters
+    ----------
+    f: file
+        Object with read method.
+    """
+
+    def __init__(self, f):
         self.__f = f
         self.__num_bytes_consumed = 0
 
@@ -431,16 +432,23 @@ class LimitReader(object):
 
 
 class BytesReader(object):
-    def __init__(self, buf):
-        """Creates a file-like object that reads from a buffer.
+    """Creates a file-like object that reads from a buffer.
 
-        Parameters
-        ----------
-        buf: bytes
-            Object to read from.
-        """
+    Parameters
+    ----------
+    buf: bytes
+        Object to read from.
+    """
+
+    def __init__(self, buf):
         self.__buf = buf
         self.__num_bytes_consumed = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
 
     def read(self, max_bytes=1):
         """Read at most `max_bytes` from internal buffer.
@@ -450,6 +458,11 @@ class BytesReader(object):
         max_bytes: int
             Maximum number of bytes to read.
 
+        Raises
+        ------
+        ValueError
+            If read is called after close has been called.
+
         Returns
         --------
         bytes
@@ -457,6 +470,9 @@ class BytesReader(object):
             than `max_bytes`.  On end-of file returns a bytes object
             with zero-length.
         """
+        if self.__num_bytes_consumed is None:
+            raise ValueError('I/O operation on closed file.')
+
         if self.__num_bytes_consumed + max_bytes >= len(self.__buf):
             max_bytes = len(self.__buf) - self.__num_bytes_consumed
 
@@ -464,6 +480,17 @@ class BytesReader(object):
         self.__num_bytes_consumed += max_bytes
 
         return b
+
+    @property
+    def closed(self):
+        """bool: `True` if `self.close()` has been called; `False` otherwise."""
+        return self.__num_bytes_consumed is None
+
+    def close(self):
+        """Read operations conducted after this method is called will
+        raise `ValueError`.  This makes the object behave like other
+        read objects even though no resources are freed."""
+        self.__num_bytes_consumed = None
 
 
 FIELD_U16 = Struct('>H')
