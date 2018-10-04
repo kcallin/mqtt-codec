@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 
-from binascii import a2b_hex, b2a_hex
+from binascii import b2a_hex
 
 from io import BytesIO
 
@@ -133,7 +133,6 @@ class MqttFixedHeader(object):
             When end-of-stream is encountered before the end of the
             fixed header.
 
-
         Returns
         -------
         int
@@ -216,7 +215,7 @@ class MqttWill(object):
 
     def __repr__(self):
         msg = 'MqttWill(topic={}, payload=0x{}, retain={}, qos={})'
-        return msg.format(self.topic, a2b_hex(self.message), self.retain, self.qos)
+        return msg.format(self.topic, b2a_hex(self.message), self.retain, self.qos)
 
     def __eq__(self, other):
         return (
