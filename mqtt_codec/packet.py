@@ -1350,7 +1350,6 @@ class MqttUnsuback(MqttPacketBody):
         ----------
         packet_id: int
             0 <= packet_id <= 2**16-1
-        results: iterable of SubscribeResult
         """
         self.packet_id = packet_id
 
