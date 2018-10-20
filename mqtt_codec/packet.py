@@ -454,20 +454,37 @@ class MqttConnect(MqttPacketBody):
         connect = MqttConnect(client_id, clean_session, keep_alive, username, password, will)
         return decoder.num_bytes_consumed, connect
 
-    def __repr__(self):
-        # client_id: str
-        # clean_session: bool
-        # keep_alive: int
-        # username: str or None
-        # password: str or None
-        # will: MqttWill
+    def __str__(self):
+        """Returns a str representation of self.  The username and
+        password fields will be hashed out so that if the result of this
+        call is placed in logfiles it will not compromise the username
+        and password.
 
+        Returns
+        -------
+        str
+        """
+        msg = 'MqttConnect(client_id={}, clean_session={}, keep_alive={}s, username=***, password=***, will={})'
+        return msg.format(repr(self.client_id),
+                          self.clean_session,
+                          self.keep_alive,
+                          repr(self.will))
+
+    def __repr__(self):
+        """A full string representation of the object including username
+        and password.  It might not be good to write this result to a
+        log file.
+
+        Returns
+        -------
+        str
+        """
         msg = 'MqttConnect(client_id={}, clean_session={}, keep_alive={}s, username={}, password={}, will={})'
         return msg.format(repr(self.client_id),
                           self.clean_session,
                           self.keep_alive,
-                          self.username,
-                          self.password,
+                          repr(self.username),
+                          repr(self.password),
                           self.will)
 
 
@@ -834,7 +851,7 @@ class MqttSuback(MqttPacketBody):
         return decoder.num_bytes_consumed, MqttSuback(packet_id, results)
 
     def __repr__(self):
-        return 'MqttSuback(packet_id={}, results=[{}])'.format(self.packet_id, ', '.join(str(r) for r in self.results))
+        return 'MqttSuback(packet_id={}, results=[{}])'.format(self.packet_id, ', '.join(repr(r) for r in self.results))
 
 
 class MqttPublish(MqttPacketBody):
