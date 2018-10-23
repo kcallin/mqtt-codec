@@ -19,7 +19,7 @@ def read_path(filename):
 
 setup(
     name="mqtt-codec",
-    version="0.1.0",
+    version="0.1.1",
     install_requires=[
         # Syntax introduced sometime between setuptools-32.1.0 and setuptools-36.7.0
         # 'enum34>=1.1.6;python_version<"3.4"',
