@@ -14,8 +14,15 @@ is not ready for public consumption (2018-09-30).
 Installation
 -------------
 
-The mqtt-codec package can be installed from source in a standard fashion
-with the command:
+The mqtt-codec package can be from `<pypi.org>`_ with
+`pip <https://pypi.org/project/pip/>`_:
+
+.. code-block:: bash
+
+   pip install mqtt-codec
+
+Installations can also be performed from source in the traditional
+manner:
 
 .. code-block:: bash
 
