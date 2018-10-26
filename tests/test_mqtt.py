@@ -3,7 +3,6 @@ import unittest
 from io import BytesIO
 from struct import Struct
 
-import mqtt_codec as mqtt
 import mqtt_codec.io
 import mqtt_codec.packet
 from mqtt_codec.io import BytesReader
@@ -167,6 +166,17 @@ class TestSubackCodec(CodecHelper, unittest.TestCase):
 class TestPublish(CodecHelper, unittest.TestCase):
     def test_publish(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False))
+
+    def test_publish_payload(self):
+        publish = mqtt_codec.packet.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False)
+        with BytesIO() as f:
+            publish.encode(f)
+            buf = f.getvalue()
+
+        buf = bytearray(buf)
+        num_bytes_consumed, recovered_publish = mqtt_codec.packet.MqttPublish.decode(BytesReader(buf))
+        print(type(recovered_publish.payload))
+        print(recovered_publish)
 
 
 class TestPuback(CodecHelper, unittest.TestCase):

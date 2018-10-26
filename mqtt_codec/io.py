@@ -436,7 +436,7 @@ class BytesReader(object):
 
     Parameters
     ----------
-    buf: bytes
+    buf: bytes or bytearray
         Object to read from.
     """
 
@@ -479,6 +479,10 @@ class BytesReader(object):
         b = self.__buf[self.__num_bytes_consumed:self.__num_bytes_consumed + max_bytes]
         self.__num_bytes_consumed += max_bytes
 
+        if isinstance(b, bytearray):
+            b = bytes(b)
+
+        assert isinstance(b, bytes)
         return b
 
     @property

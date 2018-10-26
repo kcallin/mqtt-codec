@@ -150,8 +150,10 @@ forever.  A checklist to help verify the PyPI release page follows:
 
 After the checklist is complete then it is time to upload to **real**
 PyPI and verify that the release is complete.  There is no undoing
-this operation.  Think Carefully.  The access credentials in `~/.pypirc`
-contains the username/password that twine uses for PyPI.
+this operation.  Think Carefully.
+
+The access credentials in `~/.pypirc` contains the username/password
+that twine uses for PyPI.
 
 .. code-block:: none
 
@@ -164,7 +166,6 @@ contains the username/password that twine uses for PyPI.
     username:<XXXXXX>
     password:<XXXXXX>
     $ twine upload dist/*
-
 
 PEP 508 -- Dependency specification for Python Software Packages
 
