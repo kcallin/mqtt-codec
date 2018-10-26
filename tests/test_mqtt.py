@@ -5,6 +5,10 @@ from struct import Struct
 
 import mqtt_codec.io
 import mqtt_codec.packet
+from mqtt_codec.packet import (
+    MqttControlPacketType,
+    MqttFixedHeader,
+)
 from mqtt_codec.io import BytesReader
 from binascii import a2b_hex
 
@@ -26,6 +30,12 @@ class TestDecodeFixedHeader(unittest.TestCase):
         buf = ''
         self.assertRaises(mqtt_codec.io.UnderflowDecodeError, mqtt_codec.packet.MqttFixedHeader.decode, BytesReader(buf))
 
+    def test_remaining_len_too_large(self):
+        self.assertRaises(AssertionError,
+                          MqttFixedHeader,
+                          MqttControlPacketType.pingreq,
+                          0,
+                          MqttFixedHeader.MAX_REMAINING_LEN+1)
 
 class TestCodecVarInt(unittest.TestCase):
     def assert_codec_okay(self, n, buf):
@@ -136,7 +146,8 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
         self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0))
 
     def test_full_connect(self):
-        self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0, will=mqtt_codec.packet.MqttWill(0, 'hello', 'message', True)))
+        will = mqtt_codec.packet.MqttWill(0, 'hello', 'message', True)
+        self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0, will=will))
 
 
 class TestConnackCodec(CodecHelper, unittest.TestCase):

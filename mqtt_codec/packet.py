@@ -15,10 +15,9 @@ from enum import IntEnum, unique
 import mqtt_codec.io as mqtt_io
 from mqtt_codec.io import (
     DecodeError,
-    UnderflowDecodeError,
-    EncodeError,
     OverflowEncodeError,
 )
+
 
 class MqttControlPacketType(IntEnum):
     connect = 1
@@ -85,6 +84,7 @@ class MqttFixedHeader(object):
         An assert statement verifies
         that are_flags_valid(packet_type, flags) is True.
     remaining_len: int
+        Asserted to be 0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN
 
 
     See MQTT Version 3.1.1 section 2.2 Fixed Header (line 233).
@@ -99,8 +99,12 @@ class MqttFixedHeader(object):
     | byte 2 |      remaining length         |
     +--------+-------------------------------+
     """
+    MAX_REMAINING_LEN = 268435455
+
     def __init__(self, packet_type, flags, remaining_len):
+        assert packet_type in MqttControlPacketType, packet_type
         self.packet_type = packet_type
+        assert 0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN, remaining_len
 
         assert are_flags_valid(packet_type, flags)
 
