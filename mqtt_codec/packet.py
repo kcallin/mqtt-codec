@@ -16,6 +16,7 @@ import mqtt_codec.io as mqtt_io
 from mqtt_codec.io import (
     DecodeError,
     OverflowEncodeError,
+    TooBigEncodeError,
 )
 
 
@@ -77,6 +78,12 @@ def are_flags_valid(packet_type, flags):
 
 class MqttFixedHeader(object):
     """
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        The `remaining_len` exceeds the maximum of
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes).
+
     Parameters
     ----------
     packet_type: MqttControlPacketType
@@ -104,7 +111,8 @@ class MqttFixedHeader(object):
     def __init__(self, packet_type, flags, remaining_len):
         assert packet_type in MqttControlPacketType, packet_type
         self.packet_type = packet_type
-        assert 0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN, remaining_len
+        if not (0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN):
+            raise TooBigEncodeError()
 
         assert are_flags_valid(packet_type, flags)
 
@@ -236,6 +244,13 @@ class MqttWill(object):
 
 class MqttPacketBody(MqttFixedHeader):
     """
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        The message body is impossibly large to create an MQTT packet
+        for.  It must be greater than
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        to cause this error.
 
     Parameters
     ----------
@@ -294,6 +309,13 @@ class MqttPacketBody(MqttFixedHeader):
 
 class MqttConnect(MqttPacketBody):
     """
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        The parameters are impossible large to create
+        an MQTT packet for.  It encoded length must be greater than
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        to cause this error.
 
     Parameters
     ----------
@@ -628,6 +650,13 @@ class MqttTopic(object):
 
 class MqttSubscribe(MqttPacketBody):
     """
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        The parameters are impossibly large to create
+        an MQTT packet for.  The encoded length must be greater than
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        to cause this error.
 
     Parameters
     ----------
@@ -762,6 +791,14 @@ class SubscribeResult(IntEnum):
 
 class MqttSuback(MqttPacketBody):
     """
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        There are too many results to create an MQTT packet for.  The
+        encoded lenght must be greater than
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        to cause this error.
+
     Parameters
     ----------
     packet_id: int
@@ -860,6 +897,16 @@ class MqttSuback(MqttPacketBody):
 
 class MqttPublish(MqttPacketBody):
     """Represents a mqtt publish packet.
+
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        The encoded length of parameters is too long to create an MQTT
+        packet for.  The encoded lenght must be greater than
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        to cause this error.
+
+        Shorten the payload or topic to allow the message to fit.
 
     Parameters
     ----------
@@ -1030,6 +1077,12 @@ class MqttPublish(MqttPacketBody):
 
 
 class MqttPuback(MqttPacketBody):
+    """
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16 -1
+    """
     def __init__(self, packet_id):
         self.packet_id = packet_id
 
@@ -1091,6 +1144,12 @@ class MqttPuback(MqttPacketBody):
 
 
 class MqttPubrec(MqttPacketBody):
+    """
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16 -1
+    """
     def __init__(self, packet_id):
         self.packet_id = packet_id
 
@@ -1152,6 +1211,12 @@ class MqttPubrec(MqttPacketBody):
 
 
 class MqttPubrel(MqttPacketBody):
+    """
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16 -1
+    """
     def __init__(self, packet_id):
         self.packet_id = packet_id
 
@@ -1213,6 +1278,12 @@ class MqttPubrel(MqttPacketBody):
 
 
 class MqttPubcomp(MqttPacketBody):
+    """
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16 -1
+    """
     def __init__(self, packet_id):
         assert isinstance(packet_id, int)
         assert 0 <= packet_id <= 2**16-1
@@ -1282,15 +1353,24 @@ class MqttPubcomp(MqttPacketBody):
 
 
 class MqttUnsubscribe(MqttPacketBody):
-    def __init__(self, packet_id, topics):
-        """
+    """
+    Raises
+    -------
+    mqtt_codec.io.TooBigEncodeError
+        The encoded length of topic parameters is too long to create an
+        MQTT packet for.  The encoded lenghth must be greater than
+        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        to cause this error.
 
-        Parameters
-        ----------
-        packet_id: int
-            0 <= packet_id <= 2**16-1
-        topics: iterable of str
-        """
+        Shorten the number of topics or the length of the topic strings.
+
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16 -1
+    topics: iterable of str
+    """
+    def __init__(self, packet_id, topics):
         self.packet_id = packet_id
         self.topics = tuple(topics)
 
@@ -1364,14 +1444,15 @@ class MqttUnsubscribe(MqttPacketBody):
 
 
 class MqttUnsuback(MqttPacketBody):
-    def __init__(self, packet_id):
-        """
+    """
 
-        Parameters
-        ----------
-        packet_id: int
-            0 <= packet_id <= 2**16-1
-        """
+    Parameters
+    ----------
+    packet_id: int
+        0 <= packet_id <= 2**16-1
+    """
+
+    def __init__(self, packet_id):
         self.packet_id = packet_id
 
         MqttPacketBody.__init__(self, MqttControlPacketType.unsuback, 0)

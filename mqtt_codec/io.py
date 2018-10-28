@@ -253,6 +253,12 @@ class OverflowEncodeError(EncodeError):
     pass
 
 
+class TooBigEncodeError(EncodeError):
+    """Raised when the parameters used to create the MQTT packet would
+    result in an impossibly large packet."""
+    pass
+
+
 class FileDecoder(object):
     """Creates an object that extracts values from the file-like
     object `f`.
