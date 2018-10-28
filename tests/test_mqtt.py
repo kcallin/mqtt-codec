@@ -186,8 +186,6 @@ class TestPublish(CodecHelper, unittest.TestCase):
 
         buf = bytearray(buf)
         num_bytes_consumed, recovered_publish = mqtt_codec.packet.MqttPublish.decode(BytesReader(buf))
-        print(type(recovered_publish.payload))
-        print(recovered_publish)
 
 
 class TestPuback(CodecHelper, unittest.TestCase):
@@ -242,6 +240,6 @@ class TestDecode(unittest.TestCase):
         try:
             b, = FIELD_U8.unpack_from(ba)
         except struct.error as e:
-            print(repr(e))
+            pass
 
         ba.extend('cdef')
