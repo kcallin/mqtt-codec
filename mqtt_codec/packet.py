@@ -16,7 +16,7 @@ import mqtt_codec.io as mqtt_io
 from mqtt_codec.io import (
     DecodeError,
     OverflowEncodeError,
-    TooBigEncodeError,
+    OversizePacketEncodeError,
 )
 
 
@@ -112,7 +112,7 @@ class MqttFixedHeader(object):
         assert packet_type in MqttControlPacketType, packet_type
         self.packet_type = packet_type
         if not (0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN):
-            raise TooBigEncodeError()
+            raise OversizePacketEncodeError()
 
         assert are_flags_valid(packet_type, flags)
 

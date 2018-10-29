@@ -31,7 +31,7 @@ class TestDecodeFixedHeader(unittest.TestCase):
         self.assertRaises(mqtt_codec.io.UnderflowDecodeError, mqtt_codec.packet.MqttFixedHeader.decode, BytesReader(buf))
 
     def test_remaining_len_too_large(self):
-        self.assertRaises(mqtt_codec.io.TooBigEncodeError,
+        self.assertRaises(mqtt_codec.io.OversizePacketEncodeError,
                           MqttFixedHeader,
                           MqttControlPacketType.pingreq,
                           0,

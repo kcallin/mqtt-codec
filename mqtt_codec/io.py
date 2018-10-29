@@ -253,7 +253,7 @@ class OverflowEncodeError(EncodeError):
     pass
 
 
-class TooBigEncodeError(EncodeError):
+class OversizePacketEncodeError(EncodeError):
     """Raised when the parameters used to create the MQTT packet would
     result in an impossibly large packet."""
     pass
