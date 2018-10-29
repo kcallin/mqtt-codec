@@ -100,8 +100,8 @@ def encode_utf8(s, f):
     assert 0 <= num_encoded_str_bytes <= 2**16-1
     num_encoded_bytes = num_encoded_str_bytes + 2
 
-    f.write(chr((num_encoded_str_bytes & 0xff00) >> 8))
-    f.write(chr(num_encoded_str_bytes & 0x00ff))
+    f.write(FIELD_U8.pack((num_encoded_str_bytes & 0xff00) >> 8))
+    f.write(FIELD_U8.pack(num_encoded_str_bytes & 0x00ff))
     f.write(encoded_str_bytes)
 
     return num_encoded_bytes
@@ -158,6 +158,7 @@ def encode_varint(v, f):
     Parameters
     ----------
     v: int
+        Integer v >= 0.
     f: file
         Object containing a write method.
 
@@ -166,6 +167,7 @@ def encode_varint(v, f):
     int
         Number of bytes written.
     """
+    assert v >= 0
     num_bytes = 0
 
     while True:
@@ -175,7 +177,7 @@ def encode_varint(v, f):
         if v > 0:
             b = b | 0x80
 
-        f.write(chr(b))
+        f.write(FIELD_U8.pack(b))
 
         num_bytes += 1
         if v == 0:
@@ -447,6 +449,7 @@ class BytesReader(object):
     """
 
     def __init__(self, buf):
+        assert isinstance(buf, (bytes, bytearray)), type(buf)
         self.__buf = buf
         self.__num_bytes_consumed = 0
 

@@ -4,14 +4,16 @@
 ============================
 
 """
+# Standard Python Packages
 from __future__ import absolute_import
 
 from binascii import b2a_hex
-
 from io import BytesIO
 
+# 3rd Party Packages
 from enum import IntEnum, unique
 
+# mqtt_codec packages
 import mqtt_codec.io as mqtt_io
 from mqtt_codec.io import (
     DecodeError,
@@ -185,7 +187,7 @@ class MqttFixedHeader(object):
         """
         try:
             b = (int(self.packet_type) << 4) | self.flags
-            f.write(chr(b))
+            f.write(mqtt_io.FIELD_U8.pack(b))
             num_bytes_consumed = 1
             num_bytes_consumed += mqtt_io.encode_varint(self.remaining_len, f)
         except IndexError:
@@ -220,6 +222,7 @@ class MqttWill(object):
     """
 
     def __init__(self, qos, topic, message, retain):
+        assert isinstance(message, bytes)
         self.qos = qos
         self.topic = topic
         self.message = message
@@ -371,13 +374,13 @@ class MqttConnect(MqttPacketBody):
         if self.clean_session:
             flags = flags | 0x02
 
-        f.write(chr(flags))
+        f.write(mqtt_io.FIELD_U8.pack(flags))
 
         return 1
 
     def __encode_keep_alive(self, f):
-        f.write(chr((self.keep_alive & 0xff00) >> 8))
-        f.write(chr(self.keep_alive & 0x00ff))
+        f.write(mqtt_io.FIELD_U8.pack((self.keep_alive & 0xff00) >> 8))
+        f.write(mqtt_io.FIELD_U8.pack(self.keep_alive & 0x00ff))
 
         return 2
 
@@ -565,8 +568,8 @@ class MqttConnack(MqttPacketBody):
         else:
             flags = 0
 
-        f.write(chr(flags))
-        f.write(chr(self.return_code))
+        f.write(mqtt_io.FIELD_U8.pack(flags))
+        f.write(mqtt_io.FIELD_U8.pack(self.return_code))
 
         return num_bytes_written
 
@@ -974,6 +977,7 @@ class MqttPublish(MqttPacketBody):
     def __init__(self, packet_id, topic, payload, dupe, qos, retain):
         assert 0 <= packet_id <= 2**16 - 1
         assert 0 <= qos <= 2
+        assert isinstance(payload, bytes)
         assert isinstance(dupe, bool)
         assert isinstance(retain, bool)
         if qos == 0:

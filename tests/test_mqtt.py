@@ -27,7 +27,7 @@ class TestDecodeFixedHeader(unittest.TestCase):
         self.assertEqual(2, num_bytes_consumed)
 
     def test_underflow_0(self):
-        buf = ''
+        buf = b''
         self.assertRaises(mqtt_codec.io.UnderflowDecodeError, mqtt_codec.packet.MqttFixedHeader.decode, BytesReader(buf))
 
     def test_remaining_len_too_large(self):
@@ -36,6 +36,7 @@ class TestDecodeFixedHeader(unittest.TestCase):
                           MqttControlPacketType.pingreq,
                           0,
                           MqttFixedHeader.MAX_REMAINING_LEN + 1)
+
 
 class TestCodecVarInt(unittest.TestCase):
     def assert_codec_okay(self, n, buf):
@@ -146,7 +147,7 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
         self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0))
 
     def test_full_connect(self):
-        will = mqtt_codec.packet.MqttWill(0, 'hello', 'message', True)
+        will = mqtt_codec.packet.MqttWill(0, 'hello', b'message', True)
         self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0, will=will))
 
 
@@ -176,10 +177,10 @@ class TestSubackCodec(CodecHelper, unittest.TestCase):
 
 class TestPublish(CodecHelper, unittest.TestCase):
     def test_publish(self):
-        self.assert_codec_okay(mqtt_codec.packet.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False))
+        self.assert_codec_okay(mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', False, 2, False))
 
     def test_publish_payload(self):
-        publish = mqtt_codec.packet.MqttPublish(3, 'flugelhorn', 'silly_payload', False, 2, False)
+        publish = mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', False, 2, False)
         with BytesIO() as f:
             publish.encode(f)
             buf = f.getvalue()
@@ -235,11 +236,11 @@ class TestDisconnect(CodecHelper, unittest.TestCase):
 
 class TestDecode(unittest.TestCase):
     def test_decode(self):
-        ba = bytearray('a')
+        ba = bytearray(b'a')
         FIELD_U8 = Struct('>B')
         try:
             b, = FIELD_U8.unpack_from(ba)
         except struct.error as e:
             pass
 
-        ba.extend('cdef')
+        ba.extend(b'cdef')
