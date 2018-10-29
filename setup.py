@@ -1,3 +1,4 @@
+import sys
 from os.path import join, dirname
 from setuptools import setup, find_packages
 
@@ -17,14 +18,23 @@ def read_path(filename):
 # PEP 440 -- Version Identification and Dependency Specification
 # https://www.python.org/dev/peps/pep-0440/
 
+
+py_version = (sys.version_info.major, sys.version_info.minor)
+if py_version < (3, 4):
+    install_requires = [
+        # Syntax introduced sometime between setuptools-32.1.0 and setuptools-36.7.0
+        # 'enum34>=1.1.6;python_version<"3.4"',
+        # https://stackoverflow.com/questions/21082091/install-requires-based-on-python-version
+        'enum34>=1.1.6',
+    ]
+else:
+    install_requires=[]
+
+
 setup(
     name="mqtt-codec",
     version="0.1.2",
-    install_requires=[
-        # Syntax introduced sometime between setuptools-32.1.0 and setuptools-36.7.0
-        # 'enum34>=1.1.6;python_version<"3.4"',
-        'enum34>=1.1.6',
-    ],
+    install_requires=install_requires,
     tests_require = [],
     classifiers=[  # Optional
         # How mature is this project? Common values are
