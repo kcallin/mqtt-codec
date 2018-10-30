@@ -65,6 +65,5 @@ setup(
         "Documentation": "https://mqtt-codec.readthedocs.io/en/latest/",
         "Source Code": "https://github.com/kcallin/mqtt-codec",
     },
-    python_requires='==2.7.*',
+    python_requires='~=2.7,~=3.6',
 )
-
