@@ -311,7 +311,12 @@ class MqttPacketBody(MqttFixedHeader):
 
 
 class MqttConnect(MqttPacketBody):
-    """
+    """Represents an `MqttConnect` object.
+
+    The object str(self) will have the username and password obscured.
+
+    The object repr(self) does not obscure the username and password.
+
     Raises
     -------
     mqtt_codec.io.TooBigEncodeError
@@ -333,14 +338,50 @@ class MqttConnect(MqttPacketBody):
     PROTOCOL_LEVEL = b'\x04'
 
     def __init__(self, client_id, clean_session, keep_alive, username=None, password=None, will=None):
-        self.client_id = client_id
-        self.username = username
-        self.password = password
-        self.clean_session = clean_session
-        self.keep_alive = keep_alive
-        self.will = will
+        self.__client_id = client_id
+        self.__username = username
+        self.__password = password
+        self.__clean_session = clean_session
+        self.__keep_alive = keep_alive
+        self.__will = will
 
         MqttPacketBody.__init__(self, MqttControlPacketType.connect, 0)
+
+    @property
+    def client_id(self):
+        """str: Client id."""
+        return self.__client_id
+
+    @property
+    def username(self):
+        """str or None: MQTT username."""
+        return self.__username
+
+    @property
+    def password(self):
+        """str or None: MQTT password."""
+        return self.__password
+
+    @property
+    def clean_session(self):
+        """bool: MQTT password."""
+        return self.__clean_session
+
+    @property
+    def keep_alive(self):
+        """int: Keep alive period as described in MQTT 3.1.1
+        specification 3.1.2.10.  When zero keep-alive is disabled.
+        If positive then after `self.keep_alive` seconds of inactivity
+        the client will send a ping to the server."""
+        return self.__keep_alive
+
+    @property
+    def will(self):
+        """MqttWill or None: A message that will be published on behalf
+        of the client by the server in case of an unexpected
+        disconnect.  If `None` then the server does not publish any
+        message on behalf of the client."""
+        return self.__will
 
     @staticmethod
     def __encode_name(f):
