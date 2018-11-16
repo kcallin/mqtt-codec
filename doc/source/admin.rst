@@ -12,6 +12,18 @@ The release procedure was created using information from these core sources:
 Build Release
 ==============
 
+Verify version and release numbers in ``doc/source/conf.py`` match
+``setup.py``.
+
+.. code-block:: bash
+
+    $ grep -e version -e release doc/source/admin.rst
+    # The short X.Y version
+    version = u'1.0.0'
+    # The full version, including alpha/beta/rc tags
+    release = u'1.0.0'
+    $
+
 Ensure there are no old build artifacts.
 
 .. code-block:: bash
@@ -124,6 +136,10 @@ GPG signatures are created for release artifacts.
          Subkey fingerprint: BE56 D781 0163 488F C7AE  62AC 3914 0AE2 DD53 792F
     $
 
+
+Test Release
+-------------
+
 Release artifacts are uploaded to **TEST** PyPI.
 
 .. code-block:: none
@@ -151,6 +167,9 @@ forever.  A checklist to help verify the PyPI release page follows:
 After the checklist is complete then it is time to upload to **real**
 PyPI and verify that the release is complete.  There is no undoing
 this operation.  Think Carefully.
+
+Release
+--------
 
 The access credentials in `~/.pypirc` contains the username/password
 that twine uses for PyPI.
