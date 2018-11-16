@@ -33,7 +33,7 @@ else:
 
 setup(
     name="mqtt-codec",
-    version="0.1.2",
+    version="0.1.3",
     install_requires=install_requires,
     tests_require = [],
     classifiers=[  # Optional
