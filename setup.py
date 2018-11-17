@@ -1,11 +1,15 @@
 import sys
-from os.path import join, dirname
+from os.path import join, dirname, abspath
 from setuptools import setup
 
 
-def read_path(filename):
-    with open(join(dirname(__file__), filename)) as f:
+project_dir = abspath(dirname(__file__))
+
+
+def read_path(*parts):
+    with open(join(project_dir, *parts)) as f:
         return f.read()
+
 
 # Documentation on this setup function can be found at
 #
@@ -35,7 +39,7 @@ setup(
     name="mqtt-codec",
     version="0.1.3",
     install_requires=install_requires,
-    tests_require = [],
+    tests_require=[],
     classifiers=[  # Optional
         # How mature is this project? Common values are
         #   3 - Alpha
@@ -45,20 +49,31 @@ setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
+        'Topic :: Communications',
+        'Topic :: Internet',
+        'Topic :: Software Development',
+        'Topic :: Software Development :: Libraries',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Operating System :: POSIX :: Linux',
     ],
     test_suite="tests",
     use_2to3=True,
     packages=['mqtt_codec'],
     author="Keegan Callin",
     author_email="kc@kcallin.net",
-#    license="PSF",
-#    keywords="hello world example examples",
-#    could also include long_description, download_url, classifiers, etc.
-    url="https://github.com/kcallin/mqtt-codec",   # project home page
+    # license is used when the license is not specified as a trove
+    # classifier.According to note (5) at
+    #
+    #   Writing the Setup Script, Note 5, https://docs.python.org/3/distutils/setupscript.html#additional-meta-data
+    #     Retrieved 2018-11-17.
+    # could also include download_url, etc.
+    url="https://github.com/kcallin/mqtt-codec",  # project home page
     description="Weapons grade MQTT packet codec.",
     long_description=read_path('README.rst'),
     project_urls={
