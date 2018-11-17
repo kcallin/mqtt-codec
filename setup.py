@@ -1,6 +1,6 @@
 import sys
 from os.path import join, dirname
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def read_path(filename):
@@ -52,7 +52,7 @@ setup(
     ],
     test_suite="tests",
     use_2to3=True,
-    packages=find_packages(),
+    packages=['mqtt_codec'],
     author="Keegan Callin",
     author_email="kc@kcallin.net",
 #    license="PSF",
@@ -66,5 +66,11 @@ setup(
         "Documentation": "https://mqtt-codec.readthedocs.io/en/latest/",
         "Source Code": "https://github.com/kcallin/mqtt-codec",
     },
-    python_requires='~=2.7,~=3.6',
+    # Want to specify opt-in versions but found that when using
+    # pip 9.0.3 (who knows what other versions), the comma seems to
+    # prevent any part of the string from being recognized.
+    #
+    # python_requires='==2.7.*,==3.6.*',
+    #
+    python_requires='>=2.7',
 )
