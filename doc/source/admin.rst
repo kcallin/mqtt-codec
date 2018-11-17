@@ -12,7 +12,7 @@ The release procedure was created using information from these core sources:
 Build Release
 ==============
 
-Verify version and release numbers in ``doc/source/conf.py`` match
+Verify that version and release numbers in ``doc/source/conf.py`` match
 ``setup.py``.
 
 .. code-block:: bash
