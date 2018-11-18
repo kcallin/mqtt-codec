@@ -8,6 +8,7 @@ def bench_mqtt_connect_init(iterations=1000000):
         packet.MqttConnect('client_id', False, 15000, username='username', password='password',
                            will=packet.MqttWill(0, 'topic', 'message', True))
 
+
 def main():
     stopwatch = Stopwatch()
 
