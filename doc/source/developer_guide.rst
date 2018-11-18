@@ -41,6 +41,16 @@ so that users will know the artifact is not a release or from a
 continuous integration build server.
 
 
+Coverage
+=========
+
+.. code-block:: bash
+
+    $ dnf install python2-pytest python2-pytest-cov
+    $ py.test --cov=mqtt_codec tests/
+    $
+
+
 Docstrings
 ===========
 
