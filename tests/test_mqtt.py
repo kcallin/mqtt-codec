@@ -131,8 +131,13 @@ class CodecHelper(unittest.TestCase):
         return buf
 
     def assert_codec_okay(self, p, expected_bytes_hex=None):
+        repr_src = repr(p)
+        str_src = repr(p)
         buf = self.buffer_packet(p)
         num_decoded_bytes, decoded_p = p.decode(BytesReader(buf))
+        repr_recovered = repr(decoded_p)
+        str_recovered = str(decoded_p)
+        # self.assertEqual(repr_encoded, repr_decoded)
 
         if expected_bytes_hex:
             expected_bytes = a2b_hex(expected_bytes_hex)
