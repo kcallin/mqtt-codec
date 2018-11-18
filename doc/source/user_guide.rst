@@ -62,3 +62,26 @@ included here for your convenience:
 
     -- Semantic Versioning Summary, <https://semver.org/#summary>, retrieved 2018-10-01.
 
+Requirements
+=============
+
+The ``mqtt-codec`` project has been tested on Linux against these
+environments:
+
+* Python 2.7
+* Python 3.4
+* Python 3.5
+* Python 3.6
+* Python 3.7
+
+Although not tested the codec likely works on Python 3.0 - 3.3.
+Standard docker containers for these Python versions don't yet exist
+and so they have not yet been tested.
+
+
+Installation Requirements
+--------------------------
+
+When running Python versions less than 3.4 the ``enum34`` pacakge is
+required.  Besides there are no other required packages.
+

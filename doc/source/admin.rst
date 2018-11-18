@@ -198,7 +198,10 @@ Distribute Documentation
 ===========================
 
 Documentation is distributed through
-`readthedocs.org <https://mqtt-codec.readthedocs.io/en/latest>`_.
+`readthedocs.org <https://mqtt-codec.readthedocs.io/en/latest>`_.  After
+a release visit the `mqtt-codec readthedocs project <https://readthedocs.org/projects/mqtt-codec/>`_,
+select "Versions" click on "inactive" versions and make sure that the
+correct versions are marked as "Active".
 
 
 Increment Version Number

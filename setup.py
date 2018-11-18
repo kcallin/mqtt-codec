@@ -23,6 +23,8 @@ def read_path(*parts):
 
 py_version = (sys.version_info.major, sys.version_info.minor)
 if py_version < (3, 4):
+    # If updating install_requires then make sure to update the
+    # corresponding documentation in the doc folder.
     install_requires = [
         # Syntax introduced sometime between setuptools-32.1.0 and setuptools-36.7.0
         # 'enum34>=1.1.6;python_version<"3.4"',
@@ -46,6 +48,8 @@ setup(
     #
     python_requires='>=2.7',
     install_requires=install_requires,
+    # If updating tests_require then make sure to update the
+    # corresponding documentation in the doc folder.
     tests_require=[],
     use_2to3=True,
     packages=['mqtt_codec'],
