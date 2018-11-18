@@ -4,4 +4,5 @@ build
 mqtt_codec.dist-info
 mqtt_codec.egg-info
 dist
+venv
 
