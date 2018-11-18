@@ -122,7 +122,7 @@ def decode_utf8(f):
     UnderflowDecodeError
         Raised when a read failed to extract enough bytes from the
         underlying stream to decode the string.
-    DecodeError
+    Utf8DecodeError
         When any code point in the utf-8 string is invalid.
 
     Returns
@@ -145,9 +145,9 @@ def decode_utf8(f):
         raise UnderflowDecodeError()
 
     try:
-        s, num_chars = decode(buf)
-    except UnicodeError:
-        raise DecodeError('Invalid unicode character.')
+        s, num_chars = decode(buf, 'strict')
+    except UnicodeError as e:
+        raise Utf8DecodeError(e)
 
     return num_bytes_consumed, s
 
@@ -245,6 +245,12 @@ class DecodeError(Exception):
 
 class UnderflowDecodeError(DecodeError):
     pass
+
+
+class Utf8DecodeError(DecodeError):
+    def __init__(self, e):
+        assert isinstance(e, UnicodeError)
+        self.error = e
 
 
 class EncodeError(Exception):
@@ -402,6 +408,18 @@ class FileDecoder(object):
 
 
 class LimitReader(object):
+    """Reads up to ``limit`` bytes from the underlying file.  If
+    ``limit`` is none then reads to the end of the file.
+
+    Parameters
+    -----------
+    f: file
+        File-like object with read method.
+    limit: int optional
+        Maximum number of bytes to read from the underlying file or
+        ``None`` the reader should continue until the end of the file.
+    """
+
     def __init__(self, f, limit=None):
         self.__f = f
         self.__num_bytes_consumed = 0
@@ -424,7 +442,7 @@ class LimitReader(object):
         --------
         bytes
             Bytes extracted from internal buffer.  Length may be less
-            than `max_bytes`.  On end-of file returns a bytes object
+            than ``max_bytes``.  On end-of file returns a bytes object
             with zero-length.
         """
 
@@ -452,12 +470,6 @@ class BytesReader(object):
         assert isinstance(buf, (bytes, bytearray)), type(buf)
         self.__buf = buf
         self.__num_bytes_consumed = 0
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return False
 
     def read(self, max_bytes=1):
         """Read at most `max_bytes` from internal buffer.
@@ -496,7 +508,7 @@ class BytesReader(object):
 
     @property
     def closed(self):
-        """bool: `True` if `self.close()` has been called; `False` otherwise."""
+        """bool: ``True`` if `self.close()` has been called; ``False`` otherwise."""
         return self.__num_bytes_consumed is None
 
     def close(self):
