@@ -52,8 +52,15 @@ https://numpydoc.readthedocs.io/en/latest/format.html.
 Documentation
 ==============
 
-The documentation for `mqtt-codec` is created with
-`Sphinx <http://www.sphinx-doc.org/>`_.
+The documentation for ``mqtt-codec`` is created with
+`Sphinx <http://www.sphinx-doc.org/>`_ and is build the fashion usual to
+that framework:
+
+.. code-block:: bash
+
+    $ cd doc
+    $ make html
+    $
 
 
 Contributing Changes

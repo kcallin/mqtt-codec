@@ -197,11 +197,9 @@ PEP-314 -- Metadata for Python Software Packages v1.1
 Distribute Documentation
 ===========================
 
-.. code-block:: none
+Documentation is distributed through
+`readthedocs.org <https://mqtt-codec.readthedocs.io/en/latest>`_.
 
-    $ pip install sphinxcontrib-seqdiag
-    $ make html
-    $
 
 Increment Version Number
 =========================
@@ -213,5 +211,6 @@ then push the change.
 .. code-block:: none
 
     $ vi setup.py
+    $ vi doc/source/conf.py
     $ git commit setup.py
     $ git push origin master

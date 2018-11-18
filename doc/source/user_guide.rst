@@ -43,16 +43,6 @@ Typical usage of the codec looks like this:
    = Decoded MqttConnect(client_id=u'client_id', clean_session=False, keep_alive=0s, username=None, password=None, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
 
 
-Building Documentation
-=======================
-
-.. code-block:: none
-
-    $ pip install sphinxcontrib-seqdiag
-    $ make html
-    $
-
-
 Semantic Versioning
 ====================
 
