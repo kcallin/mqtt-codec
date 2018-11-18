@@ -1,3 +1,9 @@
+0.1.3 (2018-11-17)
+===================
+* Python 3 support.
+* Updating packaging mechanism.
+
+
 0.1.2 (2018-11-15)
 ===================
 * Python 3 compatibility.
