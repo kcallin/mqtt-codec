@@ -1,9 +1,7 @@
 import sys
+from os import chdir
 from os.path import join, dirname, abspath
 from setuptools import setup
-
-
-project_dir = abspath(dirname(__file__))
 
 
 def read_path(*parts):
@@ -35,6 +33,8 @@ else:
     install_requires=[]
 
 
+project_dir = abspath(dirname(__file__))
+chdir(project_dir)
 setup(
     name="mqtt-codec",
     version="0.1.3",
