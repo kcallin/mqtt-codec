@@ -23,6 +23,8 @@ from mqtt_codec.io import (
 
 
 class MqttControlPacketType(IntEnum):
+    """An enumeration of MQTT control packet types as described in the
+    MQTT 3.1.1 specificatio in Table 2.1 (line 239)."""
     connect = 1
     connack = 2
     publish = 3
@@ -84,7 +86,7 @@ class MqttFixedHeader(object):
     -------
     mqtt_codec.io.TooBigEncodeError
         The `remaining_len` exceeds the maximum of
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes).
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes).
 
     Parameters
     ----------
@@ -93,7 +95,7 @@ class MqttFixedHeader(object):
         An assert statement verifies
         that are_flags_valid(packet_type, flags) is True.
     remaining_len: int
-        Asserted to be 0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN
+        Asserted to be 0 <= remaining_len <= :const:`MqttFixedHeader.MAX_REMAINING_LEN`
 
 
     See MQTT Version 3.1.1 section 2.2 Fixed Header (line 233).
@@ -131,7 +133,7 @@ class MqttFixedHeader(object):
 
     @staticmethod
     def decode(f):
-        """Extract a `MqttFixedHeader` from `f`.
+        """Extract a `MqttFixedHeader` from ``f``.
 
         Parameters
         ----------
@@ -150,9 +152,9 @@ class MqttFixedHeader(object):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttFixedHeader
-            Header object extracted from `f`.
+            Header object extracted from ``f``.
         """
         decoder = mqtt_io.FileDecoder(f)
         (byte_0,) = decoder.unpack(mqtt_io.FIELD_U8)
@@ -252,7 +254,7 @@ class MqttPacketBody(MqttFixedHeader):
     mqtt_codec.io.TooBigEncodeError
         The message body is impossibly large to create an MQTT packet
         for.  It must be greater than
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
         to cause this error.
 
     Parameters
@@ -294,9 +296,9 @@ class MqttPacketBody(MqttFixedHeader):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttFixedHeader
-            Header object extracted from `f`.
+            Header object extracted from ``f``.
         """
 
         num_header_bytes_consumed, header = MqttFixedHeader.decode(f)
@@ -313,17 +315,18 @@ class MqttPacketBody(MqttFixedHeader):
 class MqttConnect(MqttPacketBody):
     """Represents an `MqttConnect` object.
 
-    The object str(self) will have the username and password obscured.
-
-    The object repr(self) does not obscure the username and password.
+    The value of str(self) will have the username and password obscured
+    so that it can be placed in logfiles without compromising the
+    connection username and password.  The value or repr(self) does not
+    obscure the username and password.
 
     Raises
     -------
     mqtt_codec.io.TooBigEncodeError
         The parameters are impossible large to create
         an MQTT packet for.  It encoded length must be greater than
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
-        to cause this error.
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in
+        order to cause this error.
 
     Parameters
     ----------
@@ -435,7 +438,7 @@ class MqttConnect(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes written to `f`.
+            Number of bytes written to ``f``.
         """
         num_bytes_written = 0
         num_bytes_written += self.__encode_name(f)
@@ -471,9 +474,9 @@ class MqttConnect(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttConnect
-            Connect object extracted from `f`.
+            Object extracted from ``f``.
         """
         decoder = mqtt_io.FileDecoder(mqtt_io.LimitReader(f, header.remaining_len))
         connect_header = decoder.read(len(MqttConnect.CONNECT_HEADER))
@@ -560,6 +563,29 @@ class MqttConnect(MqttPacketBody):
 
 @unique
 class ConnackResult(IntEnum):
+    """ConnackResult codes as enumerated in Table 3.1 (line 709)
+    of the MQTT 3.1.1 specification.
+    """
+    # Attributes
+    # -----------
+    # accepted: int
+    # fail_bad_protocol_version: int
+    #     Connection Refused, unacceptable protocol version.  The Server
+    #     does not support the level of the MQTT protocol requested by the
+    #     Client
+    # fail_bad_client_id: int
+    #     Connection Refused, identifier rejected.  The client identifier
+    #     is correct UTF-8 but not allowed by the server.
+    # fail_server_unavailable: int
+    #     Connection refused, server unavailable.  The network connection
+    #     has been made but the MQTT service is unavailable.
+    # fail_bad_username_or_password: int
+    #     Connection refused, bad user name or password.  The data in the
+    #     user name or password is malformed.
+    # fail_not_authorized: int
+    #     Connection refused, not authorized.  The client is not
+    #     authorized to connect.
+
     accepted = 0
     fail_bad_protocol_version = 1
     fail_bad_client_id = 2
@@ -570,13 +596,11 @@ class ConnackResult(IntEnum):
 
 class MqttConnack(MqttPacketBody):
     """
-
     Parameters
     ----------
     session_present: bool
         Session present.
     return_code: ConnackResult
-        Connack return code [Line 709 mqtt]
     """
 
     def __init__(self, session_present, return_code):
@@ -636,9 +660,9 @@ class MqttConnack(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttConnack
-            Connack object extracted from `f`.
+            Object extracted from ``f``.
         """
         decoder = mqtt_io.FileDecoder(mqtt_io.LimitReader(f, header.remaining_len))
         session_present_u8 = decoder.unpack(mqtt_io.FIELD_U8)[0]
@@ -699,8 +723,8 @@ class MqttSubscribe(MqttPacketBody):
     mqtt_codec.io.TooBigEncodeError
         The parameters are impossibly large to create
         an MQTT packet for.  The encoded length must be greater than
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
-        to cause this error.
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in
+        order to cause this error.
 
     Parameters
     ----------
@@ -761,9 +785,9 @@ class MqttSubscribe(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttSubscribe
-            Subscribe object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.subscribe
 
@@ -840,8 +864,8 @@ class MqttSuback(MqttPacketBody):
     mqtt_codec.io.TooBigEncodeError
         There are too many results to create an MQTT packet for.  The
         encoded lenght must be greater than
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
-        to cause this error.
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in
+        order to cause this error.
 
     Parameters
     ----------
@@ -914,9 +938,9 @@ class MqttSuback(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttSuback
-            Suback object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.suback
 
@@ -947,8 +971,8 @@ class MqttPublish(MqttPacketBody):
     mqtt_codec.io.TooBigEncodeError
         The encoded length of parameters is too long to create an MQTT
         packet for.  The encoded lenght must be greater than
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
-        to cause this error.
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in
+        order to cause this error.
 
         Shorten the payload or topic to allow the message to fit.
 
@@ -1084,8 +1108,10 @@ class MqttPublish(MqttPacketBody):
 
         Returns
         -------
-        (num_bytes_consumed: int, packet: MqttPublish)
-            Number of bytes written to file.
+        int
+            Number of bytes consumed from ``f``.
+        MqttPublish
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.publish
 
@@ -1169,9 +1195,9 @@ class MqttPuback(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttPuback
-            MqttPuback object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.puback
 
@@ -1236,9 +1262,9 @@ class MqttPubrec(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttPubrec
-            MqttPubrec object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.pubrec
 
@@ -1303,9 +1329,9 @@ class MqttPubrel(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttPubrel
-            MqttPubrel object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.pubrel
 
@@ -1378,9 +1404,9 @@ class MqttPubcomp(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttPubcomp
-            MqttPubcomp object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.pubcomp
 
@@ -1404,8 +1430,8 @@ class MqttUnsubscribe(MqttPacketBody):
     mqtt_codec.io.TooBigEncodeError
         The encoded length of topic parameters is too long to create an
         MQTT packet for.  The encoded lenghth must be greater than
-        `MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in order
-        to cause this error.
+        :const:`MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes) in
+        order to cause this error.
 
         Shorten the number of topics or the length of the topic strings.
 
@@ -1466,9 +1492,9 @@ class MqttUnsubscribe(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttUnsubscribe
-            MqttUnsubscribe object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.unsubscribe
 
@@ -1537,9 +1563,9 @@ class MqttUnsuback(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttUnsuback
-            MqttUnsuback object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.unsuback
 
@@ -1594,9 +1620,9 @@ class MqttPingreq(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttPingreq
-            MqttPingreq object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.pingreq
 
@@ -1648,9 +1674,9 @@ class MqttPingresp(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttPingresp
-            MqttPingresp object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.pingresp
 
@@ -1684,9 +1710,9 @@ class MqttDisconnect(MqttPacketBody):
 
     @classmethod
     def decode_body(cls, header, f):
-        """Generates a `MqttDisconnect` packet given a
-        `MqttFixedHeader`.  This method asserts that header.packet_type
-        is `disconnect`.
+        """Generates a :class:`MqttDisconnect` packet given a
+        :class:`MqttFixedHeader`.  This method asserts that
+        header.packet_type is :const:`MqttControlPacketType.disconnect`.
 
         Parameters
         ----------
@@ -1702,9 +1728,9 @@ class MqttDisconnect(MqttPacketBody):
         Returns
         -------
         int
-            Number of bytes consumed from `f`.
+            Number of bytes consumed from ``f``.
         MqttDisconnect
-            MqttDisconnect object extracted from `f`.
+            Object extracted from ``f``.
         """
         assert header.packet_type == MqttControlPacketType.disconnect
 
