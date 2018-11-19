@@ -43,25 +43,6 @@ Typical usage of the codec looks like this:
    = Decoded MqttConnect(client_id=u'client_id', clean_session=False, keep_alive=0s, username=None, password=None, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
 
 
-Semantic Versioning
-====================
-
-The `mqtt-codec` package is versioned according to `Semantic Versioning
-<https://semver.org>`_ 2.0.0 guidelines.  A summary of SemVer is
-included here for your convenience:
-
-    Given a version number MAJOR.MINOR.PATCH, increment the:
-
-    1. MAJOR version when you make incompatible API changes,
-    2. MINOR version when you add functionality in a
-       backwards-compatible manner, and
-    3. PATCH version when you make backwards-compatible bug fixes.
-
-    Additional labels for pre-release and build metadata are available
-    as extensions to the MAJOR.MINOR.PATCH format.
-
-    -- Semantic Versioning Summary, <https://semver.org/#summary>, retrieved 2018-10-01.
-
 Requirements
 =============
 
@@ -100,3 +81,40 @@ MQTT packet can temporarily consume up to
 of memory and a proportionate amount of processor time.  In practice
 most packets tend to be much smaller than this and the processor time
 seems small enough for most applications.
+
+
+Testing and Quality
+====================
+
+The `mqtt-codec` package is tested against most use and abuse cases.  It
+has proven itself in distributed IoT environments with thousands of
+nodes and expected to perform as well or better than most quality
+industrial scale systems.  There is a high bar to marking a release as
+stable and it usually takes more than a month of field data collection
+on a prospective release before this happens.
+
+The codec has not proven itself in hostile and malicious environments
+and has not seen thorough 3rd-party review from a security specialist.
+If you are interested in assisting then please contact the author,
+`Keegan Callin <mailto:kc@kcallin.net?subject=mqtt-codec_Security_Review>`_.
+
+
+Semantic Versioning
+====================
+
+The `mqtt-codec` package is versioned according to `Semantic Versioning
+<https://semver.org>`_ 2.0.0 guidelines.  A summary of SemVer is
+included here for your convenience:
+
+    Given a version number MAJOR.MINOR.PATCH, increment the:
+
+    1. MAJOR version when you make incompatible API changes,
+    2. MINOR version when you add functionality in a
+       backwards-compatible manner, and
+    3. PATCH version when you make backwards-compatible bug fixes.
+
+    Additional labels for pre-release and build metadata are available
+    as extensions to the MAJOR.MINOR.PATCH format.
+
+    -- Semantic Versioning Summary, <https://semver.org/#summary>, retrieved 2018-10-01.
+
