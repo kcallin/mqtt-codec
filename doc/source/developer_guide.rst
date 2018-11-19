@@ -44,11 +44,21 @@ continuous integration build server.
 Coverage
 =========
 
+Code coverage numbers on the ``mqtt-codec`` are normally above 90%.
+This by itself does not guarantee correctness but it does provide some
+safety when making code changes.
+
 .. code-block:: bash
 
     $ dnf install python2-pytest python2-pytest-cov
     $ py.test --cov=mqtt_codec tests/
     $
+
+It is hard to drive coverage numbers higher because the code is written
+using a "fail-fast" style.  There are many code paths that are
+indicative of programming errors and therefore purposely panic.  There
+is not way for unit tests to hit these code paths so library test
+coverage will never be 100%.
 
 
 Docstrings
