@@ -85,3 +85,18 @@ Installation Requirements
 When running Python versions less than 3.4 the ``enum34`` pacakge is
 required.  Besides there are no other required packages.
 
+
+Processor and Memory Usage
+===========================
+
+The maximum size of an MQTT packet is :const:`mqtt_codec.packet.MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes).
+Encoding an mqtt message may consume up to this many bytes.
+
+While constructing an MQTT packet it is necessary to temporarily encode
+it so that the byte size of contained UTF-8 strings can be determined
+and the final packet size calculated.  This means that constructing an
+MQTT packet can temporarily consume up to
+:const:`mqtt_codec.packet.MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes)
+of memory and a proportionate amount of processor time.  In practice
+most packets tend to be much smaller than this and the processor time
+seems small enough for most applications.
