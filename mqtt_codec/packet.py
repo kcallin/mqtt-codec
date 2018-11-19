@@ -187,13 +187,10 @@ class MqttFixedHeader(object):
         int
             Number of bytes written.
         """
-        try:
-            b = (int(self.packet_type) << 4) | self.flags
-            f.write(mqtt_io.FIELD_U8.pack(b))
-            num_bytes_consumed = 1
-            num_bytes_consumed += mqtt_io.encode_varint(self.remaining_len, f)
-        except IndexError:
-            raise OverflowEncodeError()
+        b = (int(self.packet_type) << 4) | self.flags
+        f.write(mqtt_io.FIELD_U8.pack(b))
+        num_bytes_consumed = 1
+        num_bytes_consumed += mqtt_io.encode_varint(self.remaining_len, f)
 
         return num_bytes_consumed
 
@@ -509,8 +506,7 @@ class MqttConnect(MqttPacketBody):
             will = MqttWill(will_qos, will_topic, will_message, will_retained)
         else:
             if will_qos != 0:
-                # [MQTT-3.1.2-13]
-                raise DecodeError('Expected will_qos to be zero since will flag is zero.')
+                raise DecodeError('Expected will_qos to be zero since will flag is zero. [MQTT-3.1.2-13]')
 
             will = None
 

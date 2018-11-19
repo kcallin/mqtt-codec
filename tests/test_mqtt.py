@@ -3,13 +3,16 @@ import unittest
 from io import BytesIO
 from struct import Struct
 
+from mqtt_codec.io import (
+    DecodeError,
+    BytesReader
+)
 import mqtt_codec.io
 import mqtt_codec.packet
 from mqtt_codec.packet import (
     MqttControlPacketType,
     MqttFixedHeader,
 )
-from mqtt_codec.io import BytesReader
 from binascii import a2b_hex
 
 
@@ -36,6 +39,24 @@ class TestDecodeFixedHeader(unittest.TestCase):
                           MqttControlPacketType.pingreq,
                           0,
                           MqttFixedHeader.MAX_REMAINING_LEN + 1)
+
+    def test_invalid_packet_type(self):
+        buf = bytearray(a2b_hex('ff01'))
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttFixedHeader.decode, BytesReader(buf))
+
+    def test_invalid_flags(self):
+        buf = bytearray(a2b_hex('cf01'))
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttFixedHeader.decode, BytesReader(buf))
+
+    def test_eq(self):
+        buf = bytearray(a2b_hex('c000'))
+        num_bytes_consumed, h = mqtt_codec.packet.MqttFixedHeader.decode(BytesReader(buf))
+        self.assertEqual(h, h)
+
+    def test_packat(self):
+        buf = bytearray(a2b_hex('c000'))
+        num_bytes_consumed, h = mqtt_codec.packet.MqttFixedHeader.decode(BytesReader(buf))
+        self.assertEqual(h, h.packet())
 
 
 class TestCodecVarInt(unittest.TestCase):
@@ -152,8 +173,36 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
         self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0))
 
     def test_full_connect(self):
-        will = mqtt_codec.packet.MqttWill(0, 'hello', b'message', True)
-        self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id', False, 0, will=will))
+        will = mqtt_codec.packet.MqttWill(2, 'hello', b'message', True)
+        self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id',
+                                                             True,
+                                                             0,
+                                                             username='tribble',
+                                                             password='bibble',
+                                                             will=will))
+
+    def test_will_eq(self):
+        will0 = mqtt_codec.packet.MqttWill(0, 'hello', b'message', True)
+        self.assertEqual(will0, will0)
+
+        will1 = mqtt_codec.packet.MqttWill(0, 'hello', b'message1', True)
+        self.assertNotEqual(will0, will1)
+
+    def test_extra_bytes(self):
+        buf = bytearray(a2b_hex('c000'))
+        num_bytes_consumed, h = mqtt_codec.packet.MqttFixedHeader.decode(BytesReader(buf))
+        self.assertEqual(h.remaining_len, 0)
+        self.assertEqual(2, num_bytes_consumed)
+
+        connect = mqtt_codec.packet.MqttConnect('client_id', False, 0)
+        with BytesIO() as f:
+            num_bytes_written = connect.encode(f)
+            value0 = f.getvalue()
+            f.seek(1)
+            f.write('\x7f')
+            f.seek(0)
+            value1 = f.getvalue()
+            self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, f)
 
 
 class TestConnackCodec(CodecHelper, unittest.TestCase):
