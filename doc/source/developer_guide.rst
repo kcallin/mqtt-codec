@@ -129,6 +129,7 @@ the ECA document.
 Note that the footer entries must occur at the bottom of the commit
 message and must not include any blank lines.
 
+
 Signing off on a commit
 ========================
 
