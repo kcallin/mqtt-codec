@@ -129,9 +129,10 @@ def decode_utf8(f):
 
     Returns
     -------
-    (num_bytes_consumed: int, value: str)
-        A 2-tuple containing the number of bytes consumed and a str
-        object.
+    int
+        Number of bytes consumed.
+    str
+        A string utf-8 decoded from ``f``.
     """
     decode = codecs.getdecoder('utf8')
 
