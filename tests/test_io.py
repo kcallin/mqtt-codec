@@ -38,7 +38,7 @@ class TestDecodeUtf8(unittest.TestCase):
 
     def test_invalid_utf8(self):
         with BytesIO() as buf:
-            encode_bytes('0\xff1234', buf)
+            encode_bytes(b'0\xff1234', buf)
             buf.seek(0)
             self.assertRaises(Utf8DecodeError, decode_utf8, buf)
 
