@@ -1158,11 +1158,11 @@ class MqttPublish(MqttPacketBody):
             assert dupe is False
 
         self.__packet_id = packet_id
-        self.topic = topic
-        self.payload = payload
-        self.dupe = dupe
-        self.qos = qos
-        self.retain = retain
+        self.__topic = topic
+        self.__payload = payload
+        self.__dupe = dupe
+        self.__qos = qos
+        self.__retain = retain
 
         flags = 0
         if dupe:
@@ -1179,6 +1179,26 @@ class MqttPublish(MqttPacketBody):
     def packet_id(self):
         """int: packet id such that 0 <= packet_id <= 2**16-1."""
         return self.__packet_id
+
+    @property
+    def topic(self):
+        return self.__topic
+
+    @property
+    def payload(self):
+        return self.__payload
+
+    @property
+    def dupe(self):
+        return self.__dupe
+
+    @property
+    def qos(self):
+        return self.__qos
+
+    @property
+    def retain(self):
+        return self.__retain
 
     def encode_body(self, f):
         """
@@ -1580,7 +1600,7 @@ class MqttUnsubscribe(MqttPacketBody):
     """
     def __init__(self, packet_id, topics):
         self.__packet_id = packet_id
-        self.topics = tuple(topics)
+        self.__topics = tuple(topics)
 
         if isinstance(topics, (str, unicode, bytes)):
             raise TypeError()
@@ -1593,6 +1613,11 @@ class MqttUnsubscribe(MqttPacketBody):
     def packet_id(self):
         """int: packet id such that 0 <= packet_id <= 2**16-1."""
         return self.__packet_id
+
+    @property
+    def topics(self):
+        """tuple of str: Topics to be unsubscribed."""
+        return self.__topics
 
     def encode_body(self, f):
         """
