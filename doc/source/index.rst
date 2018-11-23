@@ -36,10 +36,10 @@ Project Infrastructure
 
 The project is coordinated through public infrastructure:
 
-* `Releases <https://pypi.org/project/mqtt-codec>`_
-* `Documentation <https://mqtt-codec.readthedocs.io/en/latest/>`_
-* `Bug Tracker <https://github.com/kcallin/mqtt-codec/issues>`_
-* `Code Repository <https://github.com/kcallin/mqtt-codec>`_
+* `Releases (pypi) <https://pypi.org/project/mqtt-codec>`_
+* `Documentation (readthedocs.io) <https://mqtt-codec.readthedocs.io/en/latest/>`_
+* `Bug Tracker (github) <https://github.com/kcallin/mqtt-codec/issues>`_
+* `Code Repository (github) <https://github.com/kcallin/mqtt-codec>`_
 
 
 Table of Contents
