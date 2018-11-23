@@ -28,6 +28,9 @@ def encode_bytes(src_buf, dst_file):
     int
         Number of bytes written to `dst_file`.
     """
+    if not isinstance(src_buf, bytes):
+        raise TypeError('src_buf must by bytes.')
+
     len_src_buf = len(src_buf)
     assert 0 <= len_src_buf <= 2**16-1
     num_written_bytes = len_src_buf + 2
