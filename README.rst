@@ -42,16 +42,15 @@ environments:
 * Python 3.6
 * Python 3.7
 
-Although not tested the codec likely works on Python 3.0 - 3.3.
-Standard docker containers for these Python versions don't yet exist
-and so they have not yet been tested.
+Python versions Python 3.0 - 3.3 may work but are not tested as part of
+the project continuous integration infrastructure.
 
 
 Library Requirements
 =====================
 
-When running Python versions less than 3.4 the ``enum34`` pacakge is
-required.  Besides there are no other required packages.
+When running Python versions less than 3.4 the ``enum34`` package is
+required.  There are no other package requirements.
 
 
 Project Infrastructure
@@ -60,7 +59,7 @@ Project Infrastructure
 The project is coordinated through public infrastructure available at
 several places:
 
-* `Releases <https://pypi.org/project/mqtt-codec>`_
-* `Documentation <https://mqtt-codec.readthedocs.io/en/latest/>`_
-* `Bug Tracker <https://github.com/kcallin/mqtt-codec/issues>`_
-* `Code Repository <https://github.com/kcallin/mqtt-codec>`_
+* `Releases (pypi) <https://pypi.org/project/mqtt-codec>`_
+* `Documentation (readthedocs.io) <https://mqtt-codec.readthedocs.io/en/latest/>`_
+* `Bug Tracker (github) <https://github.com/kcallin/mqtt-codec/issues>`_
+* `Code Repository (github) <https://github.com/kcallin/mqtt-codec>`_
