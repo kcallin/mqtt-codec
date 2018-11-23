@@ -60,8 +60,8 @@ Standard docker containers for these Python versions don't yet exist
 and so they have not yet been tested.
 
 
-Installation Requirements
---------------------------
+Package Dependencies
+---------------------
 
 When running Python versions less than 3.4 the ``enum34`` pacakge is
 required.  Besides there are no other required packages.
@@ -71,7 +71,8 @@ Processor and Memory Usage
 ===========================
 
 The maximum size of an MQTT packet is :const:`mqtt_codec.packet.MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes).
-Encoding an mqtt message may consume up to this many bytes.
+Encoding or decoding an mqtt message may consume up to this many bytes.
+Smaller messages require less memory to encode or decode.
 
 While constructing an MQTT packet it is necessary to temporarily encode
 it so that the byte size of contained UTF-8 strings can be determined
@@ -96,7 +97,7 @@ on a prospective release before this happens.
 The codec has not proven itself in hostile and malicious environments
 and has not seen thorough 3rd-party review from a security specialist.
 If you are interested in assisting then please contact the author,
-`Keegan Callin <mailto:kc@kcallin.net?subject=mqtt-codec_Security_Review>`_.
+`Keegan Callin <mailto:kc@kcallin.net>`_.
 
 
 Semantic Versioning
@@ -118,3 +119,10 @@ included here for your convenience:
 
     -- Semantic Versioning Summary, <https://semver.org/#summary>, retrieved 2018-10-01.
 
+
+Bugs and Enhancements
+======================
+
+As the maintainer of this library I, Keegan Callin, welcome your polite,
+constructive comments and criticisms of this library at the
+`github issue tracker <https://github.com/kcallin/mqtt-codec/issues>`_.
