@@ -50,7 +50,7 @@ from mqtt_codec.io import (
 
 class MqttControlPacketType(IntEnum):
     """An enumeration of MQTT control packet types as described in the
-    MQTT 3.1.1 specificatio in Table 2.1 (line 239)."""
+    MQTT 3.1.1 specification in Table 2.1 (line 239)."""
     connect = 1
     connack = 2
     publish = 3
