@@ -199,7 +199,7 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
             num_bytes_written = connect.encode(f)
             value0 = f.getvalue()
             f.seek(1)
-            f.write('\x7f')
+            f.write(b'\x7f')
             f.seek(0)
             value1 = f.getvalue()
             self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, f)
