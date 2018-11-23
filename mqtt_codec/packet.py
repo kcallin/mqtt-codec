@@ -3,7 +3,29 @@
 `mqtt_codec.packet` Package
 ============================
 
+
 """
+
+#
+# .. uml::
+#
+#     MqttFixedHeader <|-- MqttPacketBody
+#      MqttPacketBody <|-- MqttConnect
+#      MqttPacketBody <|-- MqttConnack
+#      MqttPacketBody <|-- MqttSubscribe
+#      MqttPacketBody <|-- MqttSuback
+#      MqttPacketBody <|-- MqttPublish
+#      MqttPacketBody <|-- MqttPuback
+#      MqttPacketBody <|-- MqttPubrec
+#      MqttPacketBody <|-- MqttPubrel
+#      MqttPacketBody <|-- MqttPubcomp
+#      MqttPacketBody <|-- MqttUnsubscribe
+#      MqttPacketBody <|-- MqttUnsuback
+#      MqttPacketBody <|-- MqttPingreq
+#      MqttPacketBody <|-- MqttPingresp
+#      MqttPacketBody <|-- MqttDisconnect
+#
+
 # Standard Python Packages
 from __future__ import absolute_import
 
@@ -81,7 +103,21 @@ def are_flags_valid(packet_type, flags):
 
 
 class MqttFixedHeader(object):
-    """
+    """An immutable class that represents an MQTT fixed header as
+    described in MQTT Version 3.1.1 section 2.2 (line 233).
+
+    The serialized byte format is summarized as follows:
+
+    +--------+-------------------------------+
+    |        |              Bit              |
+    |        +---+---+---+---+---+---+---+---+
+    |        | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+    +========+===+===+===+===+===+===+===+===+
+    | byte 1 | control type  |    flags      |
+    +--------+---------------+---------------+
+    | byte 2 |      remaining length         |
+    +--------+-------------------------------+
+
     Raises
     -------
     mqtt_codec.io.TooBigEncodeError
@@ -96,32 +132,19 @@ class MqttFixedHeader(object):
         that are_flags_valid(packet_type, flags) is True.
     remaining_len: int
         Asserted to be 0 <= remaining_len <= :const:`MqttFixedHeader.MAX_REMAINING_LEN`
-
-
-    See MQTT Version 3.1.1 section 2.2 Fixed Header (line 233).
-
-    +--------+-------------------------------+
-    |        |              Bit              |
-    |        +---+---+---+---+---+---+---+---+
-    |        | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-    +========+===+===+===+===+===+===+===+===+
-    | byte 1 | control type  |    flags      |
-    +--------+---------------+---------------+
-    | byte 2 |      remaining length         |
-    +--------+-------------------------------+
     """
     MAX_REMAINING_LEN = 268435455
 
     def __init__(self, packet_type, flags, remaining_len):
         assert packet_type in MqttControlPacketType, packet_type
-        self.packet_type = packet_type
+        self.__packet_type = packet_type
         if not (0 <= remaining_len <= MqttFixedHeader.MAX_REMAINING_LEN):
             raise OversizePacketEncodeError()
 
         assert are_flags_valid(packet_type, flags)
 
-        self.flags = flags
-        self.remaining_len = remaining_len
+        self.__flags = flags
+        self.__remaining_len = remaining_len
 
         size = 1
         with BytesIO() as buf:
@@ -129,7 +152,30 @@ class MqttFixedHeader(object):
             size += len(buf.getvalue())
         size += self.remaining_len
 
-        self.size = size
+        self.__size = size
+
+    @property
+    def packet_type(self):
+        """MqttControlPacketType: MQTT packet type of ``self``."""
+        return self.__packet_type
+
+    @property
+    def flags(self):
+        """int: A value 0 <= flags <= 15 representing the 4-bit MQTT
+        header flags field.  The property is guaranteed to comply with
+        [MQTT-2.2.2-1] requirements based on ``self.packet_type``.
+        """
+        return self.__flags
+
+    @property
+    def remaining_len(self):
+        """int: Number bytes in packet that follow the packet header."""
+        return self.__remaining_len
+
+    @property
+    def size(self):
+        """int: Number bytes required to encode the packet ``self``."""
+        return self.__size
 
     @staticmethod
     def decode(f):
@@ -209,7 +255,8 @@ class MqttFixedHeader(object):
 
 
 class MqttWill(object):
-    """
+    """An immutable class representing an MQTT Will message as
+    described beginning in [MQTT-3.1.2-8, line 471].
 
     Parameters
     ----------
@@ -222,10 +269,33 @@ class MqttWill(object):
 
     def __init__(self, qos, topic, message, retain):
         assert isinstance(message, bytes)
-        self.qos = qos
-        self.topic = topic
-        self.message = message
-        self.retain = retain
+        self.__qos = qos
+        self.__topic = topic
+        self.__message = message
+        self.__retain = retain
+
+    @property
+    def qos(self):
+        """int: A number such that 0 <= ``self.qos`` <= 2."""
+        return self.__qos
+
+    @property
+    def topic(self):
+        """str: Topic name."""
+        return self.__topic
+
+    @property
+    def message(self):
+        """bytes: Will message."""
+        return self.__message
+
+    @property
+    def retain(self):
+        """bool: Will retain flag as described in MQTT spec line 504
+        section 3.1.2.7.  In general, with the retain flag set the will
+        message will be saved and published to clients as they connect
+        to the server."""
+        return self.__retain
 
     def __repr__(self):
         msg = 'MqttWill(topic={}, payload=0x{}, retain={}, qos={})'
@@ -310,7 +380,8 @@ class MqttPacketBody(MqttFixedHeader):
 
 
 class MqttConnect(MqttPacketBody):
-    """Represents an `MqttConnect` object.
+    """An immutable representation of an MQTT connect object as in MQTT
+    3.1 (line 364).
 
     The value of str(self) will have the username and password obscured
     so that it can be placed in logfiles without compromising the
@@ -591,7 +662,9 @@ class ConnackResult(IntEnum):
 
 
 class MqttConnack(MqttPacketBody):
-    """
+    """An immutable representation of an MQTT Connack packet as
+    described in MQTT 3.2 (line 655).
+
     Parameters
     ----------
     session_present: bool
@@ -604,10 +677,22 @@ class MqttConnack(MqttPacketBody):
         assert isinstance(session_present, bool)
         assert isinstance(return_code, ConnackResult)
 
-        self.session_present = session_present
-        self.return_code = return_code
+        self.__session_present = session_present
+        self.__return_code = return_code
 
         MqttPacketBody.__init__(self, MqttControlPacketType.connack, 0)
+
+    @property
+    def session_present(self):
+        """bool: Session present flag as described in MQTT 3.2.2.2 line
+        676."""
+        return self.__session_present
+
+    @property
+    def return_code(self):
+        """ConnackResult: Result of the connect as described in MQTT
+        3.2.2.3 line 701."""
+        return self.__return_code
 
     def encode_body(self, f):
         """
@@ -690,6 +775,7 @@ class MqttTopic(object):
     ----------
     name: str
     max_qos: int
+        Maximum qos to be granted by server to client.
 
     """
 
@@ -697,8 +783,18 @@ class MqttTopic(object):
         if not 0 <= max_qos <= 2:
             raise ValueError('Invalid QOS.')
 
-        self.name = name
-        self.max_qos = max_qos
+        self.__name = name
+        self.__max_qos = max_qos
+
+    @property
+    def name(self):
+        """str: Topic name."""
+        return self.__name
+
+    @property
+    def max_qos(self):
+        """int: Maximum qos to be granted by server to client."""
+        return self.__max_qos
 
     def __repr__(self):
         return 'Topic({}, max_qos={})'.format(repr(self.name), self.max_qos)
@@ -713,7 +809,9 @@ class MqttTopic(object):
 
 
 class MqttSubscribe(MqttPacketBody):
-    """
+    """An immutable representation of an MQTT Subscribe packet as
+    described in MQTT 3.8 (line 908).
+
     Raises
     -------
     mqtt_codec.io.TooBigEncodeError
@@ -730,8 +828,8 @@ class MqttSubscribe(MqttPacketBody):
     """
 
     def __init__(self, packet_id, topics):
-        self.packet_id = packet_id
-        self.topics = tuple(topics)
+        self.__packet_id = packet_id
+        self.__topics = tuple(topics)
 
         if isinstance(topics, (str, unicode, bytes)):
             raise TypeError()
@@ -739,6 +837,16 @@ class MqttSubscribe(MqttPacketBody):
         assert len(topics) >= 1  # MQTT 3.8.3-3
         flags = 2  # MQTT 3.8.1-1
         MqttPacketBody.__init__(self, MqttControlPacketType.subscribe, flags)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
+
+    @property
+    def topics(self):
+        """tuple of MqttTopic: Topics requested in subscribe."""
+        return self.__topics
 
     def encode_body(self, f):
         """
@@ -854,7 +962,9 @@ class SubscribeResult(IntEnum):
 
 
 class MqttSuback(MqttPacketBody):
-    """
+    """An immutable representation of an MQTT Subscribe packet as
+    described in MQTT 3.9 (line 1007).
+
     Raises
     -------
     mqtt_codec.io.TooBigEncodeError
@@ -960,7 +1070,8 @@ class MqttSuback(MqttPacketBody):
 
 
 class MqttPublish(MqttPacketBody):
-    """Represents a mqtt publish packet.
+    """An immutable representation of an MQTT Publish packet as
+    described in MQTT 3.3 (line 715).
 
     Raises
     -------
@@ -1046,7 +1157,7 @@ class MqttPublish(MqttPacketBody):
             # [MQTT-3.3.1-2]
             assert dupe is False
 
-        self.packet_id = packet_id
+        self.__packet_id = packet_id
         self.topic = topic
         self.payload = payload
         self.dupe = dupe
@@ -1063,6 +1174,11 @@ class MqttPublish(MqttPacketBody):
             flags |= 0x01
 
         MqttPacketBody.__init__(self, MqttControlPacketType.publish, flags)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
@@ -1144,16 +1260,23 @@ class MqttPublish(MqttPacketBody):
 
 
 class MqttPuback(MqttPacketBody):
-    """
+    """An immutable representation of an MQTT Puback packet as described
+    in MQTT 3.4 (line 838).
+
     Parameters
     ----------
     packet_id: int
         0 <= packet_id <= 2**16 -1
     """
     def __init__(self, packet_id):
-        self.packet_id = packet_id
+        self.__packet_id = packet_id
 
         MqttPacketBody.__init__(self, MqttControlPacketType.puback, 0)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
@@ -1211,16 +1334,23 @@ class MqttPuback(MqttPacketBody):
 
 
 class MqttPubrec(MqttPacketBody):
-    """
+    """An immutable representation of MQTT Pubrec packet as described in
+    MQTT 3.5 (line 853).
+
     Parameters
     ----------
     packet_id: int
         0 <= packet_id <= 2**16 -1
     """
     def __init__(self, packet_id):
-        self.packet_id = packet_id
+        self.__packet_id = packet_id
 
         MqttPacketBody.__init__(self, MqttControlPacketType.pubrec, 0)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
@@ -1278,16 +1408,23 @@ class MqttPubrec(MqttPacketBody):
 
 
 class MqttPubrel(MqttPacketBody):
-    """
+    """An immutable representation of MQTT Pubrel packet as described in
+    MQTT 3.6 (line 869).
+
     Parameters
     ----------
     packet_id: int
         0 <= packet_id <= 2**16 -1
     """
     def __init__(self, packet_id):
-        self.packet_id = packet_id
+        self.__packet_id = packet_id
 
         MqttPacketBody.__init__(self, MqttControlPacketType.pubrel, 2)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
@@ -1345,7 +1482,9 @@ class MqttPubrel(MqttPacketBody):
 
 
 class MqttPubcomp(MqttPacketBody):
-    """
+    """An immutable representation of MQTT Pubrec packet as described in
+    MQTT 3.7 (line 890).
+
     Parameters
     ----------
     packet_id: int
@@ -1420,7 +1559,9 @@ class MqttPubcomp(MqttPacketBody):
 
 
 class MqttUnsubscribe(MqttPacketBody):
-    """
+    """An immutable representation of MQTT Unsubscribe packet as
+    described in MQTT 3.10 (line 1044).
+
     Raises
     -------
     mqtt_codec.io.TooBigEncodeError
@@ -1438,7 +1579,7 @@ class MqttUnsubscribe(MqttPacketBody):
     topics: iterable of str
     """
     def __init__(self, packet_id, topics):
-        self.packet_id = packet_id
+        self.__packet_id = packet_id
         self.topics = tuple(topics)
 
         if isinstance(topics, (str, unicode, bytes)):
@@ -1447,6 +1588,11 @@ class MqttUnsubscribe(MqttPacketBody):
         assert len(topics) >= 1  # MQTT 3.10.3-2
         flags = 2  # MQTT 3.10.1-1
         MqttPacketBody.__init__(self, MqttControlPacketType.unsubscribe, flags)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
@@ -1511,7 +1657,8 @@ class MqttUnsubscribe(MqttPacketBody):
 
 
 class MqttUnsuback(MqttPacketBody):
-    """
+    """An immutable representation of an MQTT Unsuback packet as
+    described in MQTT 3.11 (line 1093).
 
     Parameters
     ----------
@@ -1520,9 +1667,14 @@ class MqttUnsuback(MqttPacketBody):
     """
 
     def __init__(self, packet_id):
-        self.packet_id = packet_id
+        self.__packet_id = packet_id
 
         MqttPacketBody.__init__(self, MqttControlPacketType.unsuback, 0)
+
+    @property
+    def packet_id(self):
+        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        return self.__packet_id
 
     def encode_body(self, f):
         """
@@ -1578,6 +1730,10 @@ class MqttUnsuback(MqttPacketBody):
 
 
 class MqttPingreq(MqttPacketBody):
+    """An immutable representation of an MQTT Pingreq packet as
+    described in MQTT 3.12 (line 1109).
+
+    """
     def __init__(self):
         MqttPacketBody.__init__(self, MqttControlPacketType.pingreq, 0)
 
@@ -1632,6 +1788,8 @@ class MqttPingreq(MqttPacketBody):
 
 
 class MqttPingresp(MqttPacketBody):
+    """An immutable representation of an MQTT Pingresp packet as
+    described in MQTT 3.13 (line 1126)."""
     def __init__(self):
         MqttPacketBody.__init__(self, MqttControlPacketType.pingresp, 0)
 
@@ -1686,6 +1844,8 @@ class MqttPingresp(MqttPacketBody):
 
 
 class MqttDisconnect(MqttPacketBody):
+    """An immutable representation of an MQTT Disconnect packet as
+    described in MQTT 3.14 (line 1138)."""
     def __init__(self):
         MqttPacketBody.__init__(self, MqttControlPacketType.disconnect, 0)
 
