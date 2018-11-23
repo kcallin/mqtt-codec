@@ -3,6 +3,10 @@
 `mqtt_codec.packet` Package
 ============================
 
+A collection of classes used to represent MQTT control packets as
+described in the specification.  The classes are, in general,
+immutable; once a class has been instantiated its properties cannot be
+changed.
 
 """
 
