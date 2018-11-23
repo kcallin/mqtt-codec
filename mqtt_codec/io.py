@@ -3,6 +3,8 @@
 `mqtt_codec.io` Package
 ========================
 
+A collection of helper functions and classes used to read MQTT control
+packets.
 """
 
 import codecs
