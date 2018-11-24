@@ -5,6 +5,7 @@ Developer Guide
 The developer's guide is for a person who wants to change and contribute
 changes to `mqtt-codec`.  It builds on information in :doc:`user_guide`.
 
+
 Uncontrolled Builds
 ====================
 
@@ -83,63 +84,7 @@ that framework:
     $
 
 
-Contributing Changes
-=====================
-
-.. Adapted from http://wiki.eclipse.org/Development_Resources/Contributing_via_Git#The_Commit_Record
-.. https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work
-
-Minimally, your git commit record must have the following:
-
-1. Your name and e-mail address captured in the "Author" field.
-2. A single line summary in the message field followed by a more
-   detailed description.
-3. A "Signed-off-by" entry with matching credentials in the message
-   footer.
-
-If the commit fixes a bug then a link should be included in the message
-footer.  The id (bug number) of the bug should also be included in the
-message summary.
-
-You can specify additional authors using one or more "Also-by" entries
-in the message footer.
-
-For example:
-
-::
-
-    commit 862e6ff22ad56c10df6de3385ffa4c7d02363d1d
-    Author: Joe Somebody <somebody@someplace.net>
-    Date:   Mon Jun 17 17:19:38 2013 -0700
-
-        [410937] Auto share multiple projects in single job
-
-        When multiple projects are imported together, perform all the necessary
-        auto shares in a single job rather than spawning a separate job for each
-        project.
-
-        Bug: https://bugs.eclipse.org/bugs/show_bug.cgi?id=410937
-        Also-by: Some Otherperson <otherperson@someplace.net>
-        Signed-off-by: Joe Somebody <somebody@someplace.net>
-
-The "Signed-off-by" entry is required. By including this, you confirm
-that you are in compliance with the Certificate of Origin described in
-the ECA document.
-
-Note that the footer entries must occur at the bottom of the commit
-message and must not include any blank lines.
-
-
-Signing off on a commit
-========================
-
-Git contains built-in support for signing off on a commit.
-
-From command-line `git`, add -s to the command:
-
-.. code-block:: none
-
-   $ git commit -s --gpg-sign[=<keyid>] -m "Auto share multiple projects in single job"
+.. include:: ../../CONTRIBUTING.rst
 
 .. The project will eventually track requirements using a project like
    `Pipfile <https://github.com/pypa/pipfile>`_.
