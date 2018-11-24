@@ -984,9 +984,6 @@ class MqttSuback(MqttPacketBody):
     results: iterable of SubscribeResult
     """
     def __init__(self, packet_id, results):
-        """
-
-        """
         self.__packet_id = packet_id
         self.__results = tuple(results)
 
