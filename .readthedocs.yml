@@ -1,0 +1,11 @@
+# .readthedocs.yml
+# https://docs.readthedocs.io/en/latest/yaml-config.html
+# https://hub.docker.com/r/readthedocs/build/
+# https://github.com/rtfd/readthedocs-docker-images
+# https://github.com/rtfd/readthedocs-docker-images/pull/17
+# https://github.com/rtfd/readthedocs-build/pull/33
+# https://github.com/rtfd/readthedocs.org/pull/3339
+# https://github.com/rtfd/readthedocs.org/issues/407
+
+build:
+  image: latest
