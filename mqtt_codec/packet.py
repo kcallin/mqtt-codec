@@ -620,7 +620,7 @@ class MqttConnect(MqttPacketBody):
         -------
         str
         """
-        msg = 'MqttConnect(client_id={}, clean_session={}, keep_alive={}s, username=***, password=***, will={})'
+        msg = 'MqttConnect(client_id={}, clean_session={}, keep_alive={}, username=***, password=***, will={})'
         return msg.format(repr(self.client_id),
                           self.clean_session,
                           self.keep_alive,
@@ -635,7 +635,7 @@ class MqttConnect(MqttPacketBody):
         -------
         str
         """
-        msg = 'MqttConnect(client_id={}, clean_session={}, keep_alive={}s, username={}, password={}, will={})'
+        msg = 'MqttConnect(client_id={}, clean_session={}, keep_alive={}, username={}, password={}, will={})'
         return msg.format(repr(self.client_id),
                           self.clean_session,
                           self.keep_alive,
