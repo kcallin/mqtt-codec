@@ -8,27 +8,39 @@ described in the specification.  The classes are, in general,
 immutable; once a class has been instantiated its properties cannot be
 changed.
 
-"""
+.. uml::
+    :caption: Connection Packets
 
-#
-# .. uml::
-#
-#     MqttFixedHeader <|-- MqttPacketBody
-#      MqttPacketBody <|-- MqttConnect
-#      MqttPacketBody <|-- MqttConnack
-#      MqttPacketBody <|-- MqttSubscribe
-#      MqttPacketBody <|-- MqttSuback
-#      MqttPacketBody <|-- MqttPublish
-#      MqttPacketBody <|-- MqttPuback
-#      MqttPacketBody <|-- MqttPubrec
-#      MqttPacketBody <|-- MqttPubrel
-#      MqttPacketBody <|-- MqttPubcomp
-#      MqttPacketBody <|-- MqttUnsubscribe
-#      MqttPacketBody <|-- MqttUnsuback
-#      MqttPacketBody <|-- MqttPingreq
-#      MqttPacketBody <|-- MqttPingresp
-#      MqttPacketBody <|-- MqttDisconnect
-#
+    MqttFixedHeader <|-- MqttPacketBody
+    MqttPacketBody <|-- MqttConnect
+    MqttPacketBody <|-- MqttConnack
+    MqttPacketBody <|-- MqttDisconnect
+    MqttPacketBody <|-- MqttPingreq
+    MqttPacketBody <|-- MqttPingresp
+
+
+.. uml::
+    :caption: Subscrube/Unsubscribe Packets
+
+    MqttFixedHeader <|-- MqttPacketBody
+    MqttPacketBody <|-- MqttSubscribe
+    MqttPacketBody <|-- MqttSuback
+    MqttPacketBody <|-- MqttUnsubscribe
+    MqttPacketBody <|-- MqttUnsuback
+
+
+.. uml::
+    :caption: Publish Packets
+
+    MqttFixedHeader <|-- MqttPacketBody
+    MqttPacketBody <|-- MqttPublish
+    MqttPacketBody <|-- MqttPuback
+    MqttPacketBody <|-- MqttPubrec
+    MqttPacketBody <|-- MqttPubrel
+    MqttPacketBody <|-- MqttPubcomp
+
+
+"""
 
 # Standard Python Packages
 from __future__ import absolute_import
