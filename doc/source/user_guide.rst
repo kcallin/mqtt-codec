@@ -123,6 +123,7 @@ included here for your convenience:
 Bugs and Enhancements
 ======================
 
-As the maintainer of this library I, Keegan Callin, welcome your polite,
+As the maintainer of this library I,
+`Keegan Callin <mailto:kc@kcallin.net>`_, welcome your polite,
 constructive comments and criticisms of this library at the
 `github issue tracker <https://github.com/kcallin/mqtt-codec/issues>`_.
