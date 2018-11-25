@@ -17,7 +17,7 @@ Verify that version and release numbers in ``doc/source/conf.py`` match
 
 .. code-block:: bash
 
-    $ grep -e version -e release doc/source/admin.rst
+    $ grep -e version -e release doc/source/conf.py
     # The short X.Y version
     version = u'1.0.0'
     # The full version, including alpha/beta/rc tags
@@ -32,34 +32,25 @@ Ensure there are no old build artifacts.
     $ ls dist
     $
 
-Verify all tests pass.
+Verify all tests pass.  This will require docker to run tests in all
+environments.
 
 .. code-block:: none
 
-    $ python setup.py test
-    running test
-    running egg_info
-    creating mqtt_codec.egg-info
-    writing requirements to mqtt_codec.egg-info/requires.txt
-    writing mqtt_codec.egg-info/PKG-INFO
-    writing top-level names to mqtt_codec.egg-info/top_level.txt
-    writing dependency_links to mqtt_codec.egg-info/dependency_links.txt
-    writing manifest file 'mqtt_codec.egg-info/SOURCES.txt'
-    reading manifest file 'mqtt_codec.egg-info/SOURCES.txt'
-    writing manifest file 'mqtt_codec.egg-info/SOURCES.txt'
-    running build_ext
-    test_0 (tests.test_mqtt.TestCodecVarInt) ... ok
-    test_127 (tests.test_mqtt.TestCodecVarInt) ... ok
-    test_2097151 (tests.test_mqtt.TestCodecVarInt) ... ok
+    $ ./pyvertest.py
     [... removed for brevity ...]
-    test_decode_encode (tests.test_mqtt.TestUtf8Codec) ... ok
-    test_encode_max_len_utf8 (tests.test_mqtt.TestUtf8Codec) ... ok
-    test_encode_too_long_utf8 (tests.test_mqtt.TestUtf8Codec) ... ok
-
-    ----------------------------------------------------------------------
-    Ran 31 tests in 0.003s
-
-    OK
+    pip install python:3.7-alpine3.8
+    docker run --rm -v /home/kcallin/src/mqtt-codec:/mqtt-codec python:3.7-alpine3.8 pip install /mqtt-codec
+    Processing /mqtt-codec
+    Building wheels for collected packages: mqtt-codec
+      Running setup.py bdist_wheel for mqtt-codec: started
+      Running setup.py bdist_wheel for mqtt-codec: finished with status 'done'
+      Stored in directory: /root/.cache/pip/wheels/c1/64/0f/d02b6f3717526372cf5d4a5beb9b63181eb54bd4ed964fa7e1
+    Successfully built mqtt-codec
+    Installing collected packages: mqtt-codec
+    Successfully installed mqtt-codec-1.0.0-uncontrolled-20181125
+    Return code 0
+    > All okay.
 
 Create, sign, and push release tag:
 
