@@ -32,8 +32,11 @@ Ensure there are no old build artifacts.
     $ ls dist
     $
 
-Verify all tests pass.  This will require docker to run tests in all
-environments.
+It's a common problem to accidentally forget to commit important
+changes.  To combat this the ``pyvertest.py`` procedure clones the haka
+repository, passes it to a docker container, and runs a test battery in
+a set of environments.
+
 
 .. code-block:: none
 
@@ -58,24 +61,6 @@ Create, sign, and push release tag:
 
     $ git tag -s v0.1.0
     $ git push origin v0.1.0
-
-It's a common problem to accidentally forget to commit important
-changes.  To combat this:
-
-1. Clone repository from github.
-2. Checkout the release tag into a temporary directory.
-3. Verify that the temporary directory and your working directory do not
-   differ in any significant detail.
-
-.. code-block:: bash
-
-    $ work_dir="$(pwd)"
-    $ temp_dir="$(mktemp -d --suffix=-mqtt-codec)"
-    $ cd "${temp_dir}"
-    $ git clone git@github.com:kcallin/mqtt-codec.git .
-    $ git checkout <release-tag>
-    $ python setup.py test
-    $ diff -ur -x .git -x '*.pyc' "${work_dir}" "${temp_dir}/mqtt-codec"
 
 Create release build artifacts.
 
