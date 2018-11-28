@@ -4,12 +4,15 @@ mqtt-codec
 
 A weapons grade MQTT packet encoder and decoder (codec).
 
+
 Status
 =======
 
-The `mqtt-codec` package is an MQTT packet encoder and decoder (codec).
-The library has high test coverage (~94%) and is known to perform well
-in distributed IoT networks with thousands of nodes.
+The `mqtt-codec` package is an
+`MQTT 3.1.1 <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf>`_
+packet encoder and decoder (codec).  The library has high test coverage
+(~94%) and is known to perform well in distributed IoT networks with
+thousands of nodes.
 
 
 Installation
@@ -25,7 +28,7 @@ The mqtt-codec package can be from `<pypi.org>`_ with
 Usage
 ======
 
-The library can be used like so:
+An encode/decode cycle looks like this:
 
 .. doctest::
 
@@ -37,12 +40,9 @@ The library can be used like so:
    >>> # Encode a Connect packet
    >>> will = mqtt_codec.packet.MqttWill(qos=0, topic='hello', message='message', retain=True)
    >>> connect = mqtt_codec.packet.MqttConnect(client_id='client_id', clean_session=False, keep_alive=0, will=will)
-   >>> f = BytesIO()
-   >>> try:
+   >>> with BytesIO() as f:
    ...   num_bytes_written = connect.encode(f)
    ...   buf = f.getvalue()
-   ... finally:
-   ...   f.close()
    ...
    >>> assert len(buf) == num_bytes_written
    >>> print('0x{} ({} bytes)'.format(b2a_hex(buf), len(buf)))
@@ -55,9 +55,9 @@ The library can be used like so:
    >>> assert len(buf) == num_bytes_written
    >>> assert connect == decoded_connect
    >>> print('  Encoded {}'.format(connect))
-     Encoded MqttConnect(client_id='client_id', clean_session=False, keep_alive=0s, username=None, password=None, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
+     Encoded MqttConnect(client_id='client_id', clean_session=False, keep_alive=0, username=***, password=***, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
    >>> print('= Decoded {}'.format(decoded_connect))
-   = Decoded MqttConnect(client_id=u'client_id', clean_session=False, keep_alive=0s, username=None, password=None, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
+   = Decoded MqttConnect(client_id=u'client_id', clean_session=False, keep_alive=0, username=***, password=***, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
 
 
 Python Requirements
