@@ -2,13 +2,21 @@
 User Guide
 ============
 
-The `mqtt_codec` package is a stateless package for encoding and
-decoding MQTT 3.1.1 packets.
+The `mqtt_codec` package is a "weapons grade" stateless package for
+encoding and decoding MQTT 3.1.1 packets as defined in the
+specification at
+http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf.
+
+The package is hyperbolically "weapons grade" because its primary goal
+is thoroughness of implementation and reliability.  Speed is a distant
+secondary priority; having said this, nobody has ever lodged a
+complaint about the library being too slow.
+
 
 Usage
 ======
 
-Typical usage of the codec looks like this:
+A basic encode/decode cycle looks like this:
 
 .. doctest::
 
@@ -20,12 +28,9 @@ Typical usage of the codec looks like this:
    >>> # Encode a Connect packet
    >>> will = mqtt_codec.packet.MqttWill(qos=0, topic='hello', message='message', retain=True)
    >>> connect = mqtt_codec.packet.MqttConnect(client_id='client_id', clean_session=False, keep_alive=0, will=will)
-   >>> f = BytesIO()
-   >>> try:
+   >>> with BytesIO() as f:
    ...   num_bytes_written = connect.encode(f)
    ...   buf = f.getvalue()
-   ... finally:
-   ...   f.close()
    ...
    >>> assert len(buf) == num_bytes_written
    >>> print('0x{} ({} bytes)'.format(b2a_hex(buf), len(buf)))
@@ -38,9 +43,9 @@ Typical usage of the codec looks like this:
    >>> assert len(buf) == num_bytes_written
    >>> assert connect == decoded_connect
    >>> print('  Encoded {}'.format(connect))
-     Encoded MqttConnect(client_id='client_id', clean_session=False, keep_alive=0s, username=None, password=None, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
+     Encoded MqttConnect(client_id='client_id', clean_session=False, keep_alive=0, username=***, password=***, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
    >>> print('= Decoded {}'.format(decoded_connect))
-   = Decoded MqttConnect(client_id=u'client_id', clean_session=False, keep_alive=0s, username=None, password=None, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
+   = Decoded MqttConnect(client_id=u'client_id', clean_session=False, keep_alive=0, username=***, password=***, will=MqttWill(topic=hello, payload=0x6d657373616765, retain=True, qos=0))
 
 
 Requirements
@@ -55,20 +60,20 @@ environments:
 * Python 3.6
 * Python 3.7
 
-Although not tested the codec likely works on Python 3.0 - 3.3.
-Standard docker containers for these Python versions don't yet exist
-and so they have not yet been tested.
+The codec likely works on Python 3.0 - 3.3 as well but these tests are
+not part of the standard docker container test suite.
 
 
 Package Dependencies
 ---------------------
 
-When running Python versions less than 3.4 the ``enum34`` pacakge is
-required.  Besides there are no other required packages.
+When running Python versions less than 3.4 the
+`enum34 <https://pypi.org/project/enum34/>`_ package is required.
+Besides there are no other required packages.
 
 
 Processor and Memory Usage
-===========================
+---------------------------
 
 The maximum size of an MQTT packet is :const:`mqtt_codec.packet.MqttFixedHeader.MAX_REMAINING_LEN` (=268435455 bytes).
 Encoding or decoding an mqtt message may consume up to this many bytes.
