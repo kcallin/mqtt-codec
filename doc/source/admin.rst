@@ -55,6 +55,14 @@ a set of environments.
     Return code 0
     > All okay.
 
+Ensure that CHANGELOG.rst has release version and release date correct
+as well as release content listed.
+
+.. code-block:: bash
+
+    $ vi CHANGELOG.rst
+
+
 Create, sign, and push release tag:
 
 .. code-block:: bash
