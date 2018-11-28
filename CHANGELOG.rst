@@ -1,3 +1,13 @@
+1.0.1 (2018-11-xx)
+===================
+#4. Fix: MqttConnect.__repr__ has seconds units on keep_alive.
+
+
+1.0.0 (2018-11-24)
+===================
+* First stable production release.
+
+
 0.1.3 (2018-11-17)
 ===================
 * Python 3 support.
