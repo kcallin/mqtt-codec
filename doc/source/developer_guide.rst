@@ -79,9 +79,47 @@ that framework:
 
 .. code-block:: bash
 
-    $ cd doc
-    $ make html
-    $
+   $ cd doc
+   $ make html
+   $
+
+
+The documentation contains doctests which can be verified in this
+fashion:
+
+.. code-block:: none
+
+   $ make doctest
+   Running Sphinx v1.7.7
+   loading pickled environment... done
+   building [mo]: targets for 0 po files that are out of date
+   building [doctest]: targets for 5 source files that are out of date
+   updating environment: 0 added, 1 changed, 0 removed
+   reading sources... [100%] user_guide
+   looking for now-outdated files... none found
+   pickling environment... done
+   checking consistency... done
+   running tests...
+
+   Document: user_guide
+   --------------------
+   1 items passed all tests:
+   14 tests in default
+   14 tests in 1 items.
+   14 passed and 0 failed.
+   Test passed.
+
+   Doctest summary
+   ===============
+      14 tests
+       0 failures in tests
+       0 failures in setup code
+       0 failures in cleanup code
+   build succeeded.
+
+   Testing of doctests in the sources finished, look at the results in build/doctest/output.txt.
+
+As suggested by the text, the output can be found in ``build/doctest/output.txt``.
 
 
 .. include:: ../../CONTRIBUTING.rst
