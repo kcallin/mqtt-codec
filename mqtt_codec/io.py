@@ -523,6 +523,12 @@ class BytesReader(object):
         read objects even though no resources are freed."""
         self.__num_bytes_consumed = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
 FIELD_U16 = Struct('>H')
 FIELD_PACKET_ID = FIELD_U16
