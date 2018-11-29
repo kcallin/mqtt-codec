@@ -30,7 +30,7 @@ Usage
 
 An encode/decode cycle looks like this:
 
-.. doctest::
+.. code-block:: python
 
    >>> from io import BytesIO
    >>> from binascii import b2a_hex
