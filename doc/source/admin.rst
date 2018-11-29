@@ -187,6 +187,12 @@ a release visit the
 `mqtt-codec readthedocs Version <https://readthedocs.org/projects/mqtt-codec/versions/>`_,
 page and make sure the correct versions are marked as "Active".
 
+The ``mqtt-codec`` project documentation uses
+`PlantUML <https://pypi.org/project/plantuml/>`_ to draw diagrams and
+this package is not support out-of-the-box by `readthedocs`.  The
+project root directory contains a ``.readthedocs.yml`` file to set the
+build `readthedocs` build environment to one that supports PlantUML and
+bypass the problem.
 
 Increment Version Number
 =========================
