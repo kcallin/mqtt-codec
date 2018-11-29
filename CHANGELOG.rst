@@ -1,4 +1,4 @@
-1.0.1 (2018-11-xx)
+1.0.1 (2018-11-28)
 ===================
 #4. Fix: MqttConnect.__repr__ has seconds units on keep_alive.
 
