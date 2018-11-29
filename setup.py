@@ -65,6 +65,7 @@ setup(
     url="https://github.com/kcallin/mqtt-codec",  # project home page
     description="Weapons grade MQTT packet codec.",
     long_description=read_path('README.rst'),
+    long_description_content_type='text/x-rst',
     project_urls={
         "Bug Tracker": "https://github.com/kcallin/mqtt-codec/issues",
         "Documentation": "https://mqtt-codec.readthedocs.io/en/latest/",
