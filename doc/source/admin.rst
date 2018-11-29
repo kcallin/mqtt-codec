@@ -164,6 +164,14 @@ PyPI and verify that the release is complete.  There is no undoing
 this operation.  Think Carefully.
 
 
+PEP 508 -- Dependency specification for Python Software Packages
+
+PEP-314 -- Metadata for Python Software Packages v1.1
+
+.. [#] `Test PyPI, Registering Your Account <https://packaging.python.org/guides/using-testpypi/#registering-your-account>`_,
+       retrieved 2018-09-07.
+
+
 Official Release
 =================
 
@@ -247,13 +255,6 @@ that twine uses for PyPI.
     username:<XXXXXX>
     password:<XXXXXX>
     $ twine upload dist/*
-
-PEP 508 -- Dependency specification for Python Software Packages
-
-PEP-314 -- Metadata for Python Software Packages v1.1
-
-.. [#] `Test PyPI, Registering Your Account <https://packaging.python.org/guides/using-testpypi/#registering-your-account>`_,
-       retrieved 2018-09-07.
 
 
 Distribute Documentation
