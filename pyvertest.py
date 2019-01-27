@@ -9,18 +9,18 @@ from tempfile import mkdtemp
 
 from plumbum import local
 
-host_haka_dir = abspath(dirname(__file__))
+host_mqtt_codec_dir = abspath(dirname(__file__))
 docker = local['docker']
 git = local['git']
 
 
-def run_cmd(image_id, host_haka_dir, container_haka_dir, cmd):
+def run_cmd(image_id, host_mqtt_codec_dir, container_mqtt_codec_dir, cmd):
     container_id = docker('create', image_id, *cmd).strip()
     try:
         print('Created {container_id} from image {image_id}'.format(container_id=container_id, image_id=image_id))
-        docker('cp', host_haka_dir, '{}:{}'.format(container_id, container_haka_dir))
-        print('Cloned haka to {container_id}:{container_haka_dir}'.format(container_id=container_id,
-                                                                           container_haka_dir=container_haka_dir))
+        docker('cp', host_mqtt_codec_dir, '{}:{}'.format(container_id, container_mqtt_codec_dir))
+        print('Cloned mqtt_codec to {container_id}:{container_mqtt_codec_dir}'.format(container_id=container_id,
+                                                                          container_mqtt_codec_dir=container_mqtt_codec_dir))
         print('Running container', container_id)
         proc = docker.popen(args=['start', '-a', container_id], stdout=sys.stdout, stderr=sys.stderr)
         rc = proc.wait()
@@ -42,22 +42,22 @@ def main():
     ]
 
     return_codes = []
-    container_haka_dir= '/mqtt-codec'
+    container_mqtt_codec_dir= '/mqtt-codec'
 
-    temp_host_haka_dir = mkdtemp()
-    assert isdir(temp_host_haka_dir)
+    temp_host_mqtt_codec_dir = mkdtemp()
+    assert isdir(temp_host_mqtt_codec_dir)
     try:
-        git('clone', host_haka_dir, temp_host_haka_dir)
-        print('Cloned {} into {}.'.format(host_haka_dir, temp_host_haka_dir))
+        git('clone', host_mqtt_codec_dir, temp_host_mqtt_codec_dir)
+        print('Cloned {} into {}.'.format(host_mqtt_codec_dir, temp_host_mqtt_codec_dir))
         for image in images:
             print(50 * '*')
-            return_codes.append(run_cmd(image, temp_host_haka_dir, container_haka_dir,
-                                        ['python', join(container_haka_dir, 'setup.py'), 'test']))
-            return_codes.append(run_cmd(image, temp_host_haka_dir, container_haka_dir,
-                                        ['pip', 'install', container_haka_dir]))
+            return_codes.append(run_cmd(image, temp_host_mqtt_codec_dir, container_mqtt_codec_dir,
+                                        ['python', join(container_mqtt_codec_dir, 'setup.py'), 'test']))
+            return_codes.append(run_cmd(image, temp_host_mqtt_codec_dir, container_mqtt_codec_dir,
+                                        ['pip', 'install', container_mqtt_codec_dir]))
     finally:
-        print('Removing temp directory {}.'.format(temp_host_haka_dir))
-        rmtree(temp_host_haka_dir)
+        print('Removing temp directory {}.'.format(temp_host_mqtt_codec_dir))
+        rmtree(temp_host_mqtt_codec_dir)
 
     if any(return_codes):
         num_okay = len(rc for rc in return_codes if rc)
