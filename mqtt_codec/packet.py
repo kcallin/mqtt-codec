@@ -1190,7 +1190,15 @@ class MqttPublish(MqttPacketBody):
 
     @property
     def packet_id(self):
-        """int: packet id such that 0 <= packet_id <= 2**16-1."""
+        """int: packet id such that 0 <= packet_id <= 2**16-1.
+
+        MQTT does not use this property for QoS=0 packets.  The
+        deserializers will set this field to zero for QoS=0 packets.
+        When serializing QoS=0 packets this property's value is not
+        placed in the output.
+
+        For non-QoS=0 packets (ie. QoS=1, QoS=2) this property is
+        serialized and deserialized as expected."""
         return self.__packet_id
 
     @property
@@ -1229,7 +1237,11 @@ class MqttPublish(MqttPacketBody):
 
         num_bytes_written = 0
         num_bytes_written += mqtt_io.encode_utf8(self.topic, f)
-        num_bytes_written += f.write(mqtt_io.FIELD_U16.pack(self.packet_id))
+        if self.qos != 0:
+            # See MQTT 3.1.1 section 3.3.2.2
+            # See https://github.com/kcallin/mqtt-codec/issues/5
+            num_bytes_written += f.write(mqtt_io.FIELD_U16.pack(self.packet_id))
+
         num_bytes_written += f.write(self.payload)
 
         return num_bytes_written
@@ -1271,7 +1283,13 @@ class MqttPublish(MqttPacketBody):
 
         decoder = mqtt_io.FileDecoder(mqtt_io.LimitReader(f, header.remaining_len))
         num_bytes_consumed, topic_name = decoder.unpack_utf8()
-        packet_id, = decoder.unpack(mqtt_io.FIELD_PACKET_ID)
+
+        if qos != 0:
+            # See MQTT 3.1.1 section 3.3.2.2
+            # See https://github.com/kcallin/mqtt-codec/issues/5
+            packet_id, = decoder.unpack(mqtt_io.FIELD_PACKET_ID)
+        else:
+            packet_id = 0
 
         payload_len = header.remaining_len - decoder.num_bytes_consumed
         payload = decoder.read(payload_len)

@@ -21,25 +21,11 @@ def read_path(*parts):
 # https://www.python.org/dev/peps/pep-0440/
 
 
-py_version = (sys.version_info.major, sys.version_info.minor)
-if py_version < (3, 4):
-    # If updating install_requires then make sure to update the
-    # corresponding documentation in the doc folder.
-    install_requires = [
-        # Syntax introduced sometime between setuptools-32.1.0 and setuptools-36.7.0
-        # 'enum34>=1.1.6;python_version<"3.4"',
-        # https://stackoverflow.com/questions/21082091/install-requires-based-on-python-version
-        'enum34>=1.1.6',
-    ]
-else:
-    install_requires=[]
-
-
 project_dir = abspath(dirname(__file__))
 chdir(project_dir)
 setup(
     name="mqtt-codec",
-    version="1.0.1",
+    version="1.0.2",
     # Want to specify opt-in versions but found that when using
     # pip 9.0.3 (who knows what other versions), the comma seems to
     # prevent any part of the string from being recognized.
@@ -47,7 +33,18 @@ setup(
     # python_requires='==2.7.*,==3.4.*,==3.5.*,==3.6.*,==3.7.*',
     #
     python_requires='>=2.7',
-    install_requires=install_requires,
+    install_requires=[],
+    # install_requires=[
+    #     # Syntax introduced sometime between setuptools-32.1.0 and setuptools-36.7.0
+    #     # 'enum34>=1.1.6;python_version<"3.4"',
+    #
+    #     # https://stackoverflow.com/questions/21082091/install-requires-based-on-python-version
+    #     # https://github.com/pytest-dev/pytest/issues/3146
+    #     'enum34>=1.1.6',
+    # ]
+    extras_require={
+        ':python_version < "3.4"': ['enum34>=1.1.6']
+    },
     # If updating tests_require then make sure to update the
     # corresponding documentation in the doc folder.
     tests_require=[],
