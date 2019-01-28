@@ -50,6 +50,7 @@ Table of Contents
 
    user_guide
    mqtt_codec
+   changelog
    developer_guide
    admin
 

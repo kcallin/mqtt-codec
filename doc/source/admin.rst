@@ -1,5 +1,5 @@
 =======================
-Project Administration
+Distribution Procedure
 =======================
 
 The release procedure was created using information from these core sources:
@@ -29,15 +29,15 @@ Ensure there are no old build artifacts.
 
 .. code-block:: bash
 
-    $ rm dist/*
+    $ rm -rf dist build mqtt_codec.egg-info htmlcov
     $ ls dist
     $
 
 
 It's a common problem to accidentally forget to commit important
-changes.  To combat this the ``pyvertest.py`` procedure clones the haka
-repository, passes it to a docker container, and runs a test battery in
-a set of environments.
+changes.  To combat this the ``pyvertest.py`` procedure clones the
+``mqtt-codec`` repository, passes it to a docker container, and runs a
+test battery in a set of environments.
 
 .. code-block:: none
 
@@ -147,12 +147,14 @@ Release artifacts to **TEST** PyPI.
     $
 
 
-The resulting entry should be inspected for correctness.  "The database
-for TestPyPI may be periodically pruned, so it is not unusual for user
-accounts to be deleted [#]_".  Packages on **TEST** PyPI and **real**
-PyPI cannot be removed upon distributor demand.  On **TEST** PyPI
-packages may be removed on prune, on **real** PyPI they will remain
-forever.  A checklist to help verify the PyPI release page follows:
+The resulting `TestPyPI entry
+<https://test.pypi.org/project/mqtt-codec/>`_ should be inspected for
+correctness.  "The database for TestPyPI may be periodically pruned, so
+it is not unusual for user accounts to be deleted [#]_".  Packages on
+**TEST** PyPI and **real** PyPI cannot be removed upon distributor
+demand.  On **TEST** PyPI packages may be removed on prune, on **real**
+PyPI they will remain forever.  A checklist to help verify the PyPI
+is:
 
 * Version Number is Correct
 * Documentation Link is Correct
@@ -187,7 +189,7 @@ Remove test artifacts:
 
 .. code-block:: bash
 
-    $ rm dist/*
+    $ rm -rf dist build mqtt_codec.egg-info htmlcov
     $ ls dist
     $
 

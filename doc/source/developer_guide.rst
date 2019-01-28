@@ -42,24 +42,62 @@ so that users will know the artifact is not a release or from a
 continuous integration build server.
 
 
+Tests
+======
+
+The `mqtt-codec` library comes with a battery of tests.
+
+The built-in automated tests can be run from the command-line
+using ``setup.py``.
+
+.. code-block:: none
+
+    $ python setup.py test
+    $
+
+
 Coverage
 =========
 
-Code coverage numbers on the ``mqtt-codec`` are normally above 90%.
-This by itself does not guarantee correctness but it does provide some
-safety when making code changes.
+Test coverage is monitored using
+`coverage.py <https://coverage.readthedocs.io>`_ version 4.5 or higher.
+Normally this can be installed through your operating system's package
+manager (like rpm or apt-get) or by using `pip`.  A coverage
+configuration file is included at `.coveragerc` and the tool can be run
+in this fashion:
 
-.. code-block:: bash
+.. code-block:: none
 
-    $ dnf install python2-pytest python2-pytest-cov
-    $ py.test --cov=mqtt_codec tests/
-    $
+    $ coverage run setup.py test
+    running test
+    running egg_info
+    writing requirements to mqtt_codec.egg-info/requires.txt
+    writing mqtt_codec.egg-info/PKG-INFO
+    writing top-level names to mqtt_codec.egg-info/top_level.txt
+    writing dependency_links to mqtt_codec.egg-info/dependency_links.txt
+    reading manifest file 'mqtt_codec.egg-info/SOURCES.txt'
+    writing manifest file 'mqtt_codec.egg-info/SOURCES.txt'
+    running build_ext
+    test_read_after_close (tests.test_io.TestBytesReader) ... ok
+    test_body_underflow (tests.test_io.TestDecodeBytes) ... ok
+    [... removed for brevity...]
+    test_subscribe (tests.test_mqtt.TestUnsubscribe) ... ok
+    test_decode_encode (tests.test_mqtt.TestUtf8Codec) ... ok
+    test_encode_max_len_utf8 (tests.test_mqtt.TestUtf8Codec) ... ok
+    test_encode_too_long_utf8 (tests.test_mqtt.TestUtf8Codec) ... ok
 
-It is hard to drive coverage numbers higher because the code is written
-using a "fail-fast" style.  There are many code paths that are
-indicative of programming errors and therefore purposely panic.  There
-is not way for unit tests to hit these code paths so library test
-coverage will never be 100%.
+    ----------------------------------------------------------------------
+    Ran 48 tests in 0.014s
+
+    OK
+    $ coverage report
+    Name                     Stmts   Miss Branch BrPart  Cover
+    ----------------------------------------------------------
+    mqtt_codec/__init__.py       0      0      0      0   100%
+    mqtt_codec/io.py           162      4     32      1    97%
+    mqtt_codec/packet.py       587     40    110     27    89%
+    ----------------------------------------------------------
+    TOTAL                      749     44    142     28    91%
 
 
 Docstrings
