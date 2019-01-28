@@ -1,4 +1,3 @@
-import sys
 from os import chdir
 from os.path import join, dirname, abspath
 from setuptools import setup
@@ -42,6 +41,22 @@ setup(
     #     # https://github.com/pytest-dev/pytest/issues/3146
     #     'enum34>=1.1.6',
     # ]
+    #
+    # -kc (2018-10-16)
+    #
+    #
+    # This extras_require syntax is rumoured to have been introduced in
+    # setuptools 18.  This is the version in buildroot 2016-11:
+    #
+    # * https://github.com/buildroot/buildroot/blob/a7eb052ff8ba9234b3f8dafc8cf3986f5b39428e/package/python-setuptools/python-setuptools.mk
+    #
+    # Here are some references to the syntax; haven't found any others:
+    #
+    # * https://github.com/pytest-dev/pytest/issues/3146
+    # * https://hynek.me/articles/conditional-python-dependencies/
+    #
+    # -kc (2019-01-27)
+    #
     extras_require={
         ':python_version < "3.4"': ['enum34>=1.1.6']
     },
