@@ -20,6 +20,10 @@ class TestDecodeBytes(unittest.TestCase):
             limited_buf = LimitReader(buf, 3)
             self.assertRaises(UnderflowDecodeError, decode_bytes, limited_buf)
 
+    def test_encode_bytes_type_error(self):
+        with BytesIO() as buf:
+            self.assertRaises(TypeError, encode_bytes, 1, buf)
+
 
 class TestDecodeUtf8(unittest.TestCase):
     def test_len_underflow(self):
@@ -62,3 +66,8 @@ class TestBytesReader(unittest.TestCase):
             r.close()
             self.assertTrue(r.closed)
             self.assertRaises(ValueError, r.read)
+
+    def test_context(self):
+        with BytesReader(b'asdfasdf') as r:
+            self.assertFalse(r.closed)
+        self.assertTrue(r.closed)
