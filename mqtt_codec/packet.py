@@ -417,6 +417,7 @@ class MqttConnect(MqttPacketBody):
     client_id: str
     clean_session: bool
     keep_alive: int
+        0 <= keep_alive <= 2**16-1
     username: str or None
     password: str or None
     will: MqttWill or None
@@ -425,6 +426,9 @@ class MqttConnect(MqttPacketBody):
     PROTOCOL_LEVEL = b'\x04'
 
     def __init__(self, client_id, clean_session, keep_alive, username=None, password=None, will=None):
+        assert isinstance(client_id, (str, unicode))
+        assert 0 <= keep_alive <= 2**16-1
+
         self.__client_id = client_id
         self.__username = username
         self.__password = password
@@ -530,8 +534,7 @@ class MqttConnect(MqttPacketBody):
         num_bytes_written += self.__encode_connect_flags(f)
         num_bytes_written += self.__encode_keep_alive(f)
 
-        if self.client_id is not None:
-            num_bytes_written += mqtt_io.encode_utf8(self.client_id, f)
+        num_bytes_written += mqtt_io.encode_utf8(self.client_id, f)
 
         if self.will is not None:
             num_bytes_written += mqtt_io.encode_utf8(self.will.topic, f)
@@ -581,7 +584,7 @@ class MqttConnect(MqttPacketBody):
         zero = flags & 0x01
 
         if zero != 0:
-            raise DecodeError()
+            raise DecodeError('Invalid flags; bit 0 should be zero.')
 
         keep_alive = decoder.unpack(mqtt_io.FIELD_U16)[0]
 
@@ -1072,7 +1075,7 @@ class MqttSuback(MqttPacketBody):
             try:
                 results.append(SubscribeResult(result))
             except ValueError:
-                raise DecodeError('Unsupported result {:02x}.'.format(ord(result)))
+                raise DecodeError('Unsupported result {:02x}.'.format(result))
 
         assert header.remaining_len == decoder.num_bytes_consumed
 
@@ -1309,9 +1312,6 @@ class MqttPublish(MqttPacketBody):
 
         payload_len = header.remaining_len - decoder.num_bytes_consumed
         payload = decoder.read(payload_len)
-
-        if header.remaining_len != decoder.num_bytes_consumed:
-            raise DecodeError('Extra bytes at end of packet.')
 
         return decoder.num_bytes_consumed, MqttPublish(packet_id, topic_name, payload, dupe, qos, retain)
 
