@@ -6,3 +6,4 @@ mqtt_codec.egg-info
 dist
 venv
 .eggs
+.coverage
