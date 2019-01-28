@@ -15,6 +15,14 @@ Fix
 
     https://github.com/kcallin/haka-mqtt/issues/5
 
+#6: Corrupt MqttSuback results in non-DecodeError exception.
+
+    While decoding MqttSuback, a corrupted SubscribeResult results in
+    a TypeError instead of DecodeError.  This violates the decode
+    method's interface spec.
+
+    https://github.com/kcallin/mqtt-codec/issues/6
+
 
 1.0.1 (2018-11-28)
 ===================
