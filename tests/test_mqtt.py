@@ -234,7 +234,7 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
 
         self.assertEqual(b'\x10\x15\x00\x04MQTT\x04\x00\x00\x00\x00\tclient_id', buf)
         # Corrupt the connect header.
-        buf[4] = 'K'
+        buf[4] = ord('K')
         self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, BytesReader(buf))
 
     def test_bad_protocol_level(self):
