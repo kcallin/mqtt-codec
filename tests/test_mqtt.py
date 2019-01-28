@@ -22,6 +22,7 @@ class TestDecodeFixedHeader(unittest.TestCase):
         num_bytes_consumed, h = mqtt_codec.packet.MqttFixedHeader.decode(BytesReader(buf))
         self.assertEqual(h.remaining_len, 0)
         self.assertEqual(2, num_bytes_consumed)
+        self.assertEqual(2, h.size)
 
     def test_decode_one_nrb(self):
         buf = bytearray(a2b_hex('c001'))
@@ -167,6 +168,16 @@ class CodecHelper(unittest.TestCase):
         self.assertEqual(num_decoded_bytes, len(buf))
         self.assertEqual(p, decoded_p)
 
+    def assert_extra_bytes_fail(self, p):
+        with BytesIO() as f:
+            p.encode(f)
+            buf = bytearray(f.getvalue())
+
+        buf[1] += 1
+        buf.append(0)
+
+        self.assertRaises(DecodeError, p.decode, BytesReader(buf))
+
 
 class TestConnectCodec(CodecHelper, unittest.TestCase):
     def test_basic_connect(self):
@@ -174,6 +185,15 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
 
     def test_full_connect(self):
         will = mqtt_codec.packet.MqttWill(2, 'hello', b'message', True)
+        self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id',
+                                                             True,
+                                                             0,
+                                                             username='tribble',
+                                                             password='bibble',
+                                                             will=will))
+
+    def test_will_no_retain(self):
+        will = mqtt_codec.packet.MqttWill(0, 'hello', b'message', False)
         self.assert_codec_okay(mqtt_codec.packet.MqttConnect('client_id',
                                                              True,
                                                              0,
@@ -204,19 +224,111 @@ class TestConnectCodec(CodecHelper, unittest.TestCase):
             value1 = f.getvalue()
             self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, f)
 
+    def test_bad_connect_header(self):
+        connect = mqtt_codec.packet.MqttConnect('client_id', False, 0)
+        with BytesIO() as f:
+            connect.encode(f)
+
+            buf = bytearray(f.getvalue())
+            self.assertEqual(len(buf), connect.size)
+
+        self.assertEqual(b'\x10\x15\x00\x04MQTT\x04\x00\x00\x00\x00\tclient_id', buf)
+        # Corrupt the connect header.
+        buf[4] = 'K'
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, BytesReader(buf))
+
+    def test_bad_protocol_level(self):
+        connect = mqtt_codec.packet.MqttConnect('client_id', False, 0)
+        with BytesIO() as f:
+            connect.encode(f)
+
+            buf = bytearray(f.getvalue())
+            self.assertEqual(len(buf), connect.size)
+
+        self.assertEqual(b'\x10\x15\x00\x04MQTT\x04\x00\x00\x00\x00\tclient_id', buf)
+        # Corrupt the connect header.
+        buf[8] = 0xff
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, BytesReader(buf))
+
+    def test_bad_flags(self):
+        connect = mqtt_codec.packet.MqttConnect('client_id', False, 0)
+        with BytesIO() as f:
+            connect.encode(f)
+
+            buf = bytearray(f.getvalue())
+            self.assertEqual(len(buf), connect.size)
+
+        self.assertEqual(b'\x10\x15\x00\x04MQTT\x04\x00\x00\x00\x00\tclient_id', buf)
+        # Corrupt the connect header.
+        buf[9] = 0xff
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, BytesReader(buf))
+
+    def test_bad_will_qos(self):
+        connect = mqtt_codec.packet.MqttConnect('client_id', False, 0)
+        with BytesIO() as f:
+            connect.encode(f)
+
+            buf = bytearray(f.getvalue())
+            self.assertEqual(len(buf), connect.size)
+
+        self.assertEqual(b'\x10\x15\x00\x04MQTT\x04\x00\x00\x00\x00\tclient_id', buf)
+        # Corrupt the connect header.
+        buf[9] = buf[9] | 0x18
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnect.decode, BytesReader(buf))
+
 
 class TestConnackCodec(CodecHelper, unittest.TestCase):
     def test_decode(self):
-        self.assert_codec_okay(mqtt_codec.packet.MqttConnack(False, mqtt_codec.packet.ConnackResult.accepted), '20020000')
+        self.assert_codec_okay(mqtt_codec.packet.MqttConnack(False, mqtt_codec.packet.ConnackResult.accepted),
+                               '20020000')
+
+    def test_session_present(self):
+        self.assert_codec_okay(mqtt_codec.packet.MqttConnack(True, mqtt_codec.packet.ConnackResult.accepted),
+                               '20020100')
+
+    def test_bad_session_present(self):
+        buf = a2b_hex('20020200')
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnack.decode, BytesReader(buf))
+
+    def test_bad_return_code(self):
+        buf = a2b_hex('200201ff')
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttConnack.decode, BytesReader(buf))
+
+
+class TestTopic(unittest.TestCase):
+    def test_bad_qos(self):
+        self.assertRaises(ValueError, mqtt_codec.packet.MqttTopic, 'hello', 10)
 
 
 class TestSubscribeCodec(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttSubscribe(7, [
-            mqtt_codec.packet.MqttTopic(u'hello', 0),
-            mqtt_codec.packet.MqttTopic(u'x', 1),
-            mqtt_codec.packet.MqttTopic(u'Z', 2),
+            mqtt_codec.packet.MqttTopic('hello', 0),
+            mqtt_codec.packet.MqttTopic('x', 1),
+            mqtt_codec.packet.MqttTopic('Z', 2),
         ]))
+
+    def test_subscribe_typerror(self):
+        self.assertRaises(TypeError, mqtt_codec.packet.MqttSubscribe, 7, 'hello')
+
+    def test_mqtt_bad_topic(self):
+        buf = bytearray(b'\x82\x12\x00\x07\x00\x05hello\x00\x00\x01x\x01\x00\x01Z\x02')
+        buf[11] = 10
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttSubscribe.decode, BytesReader(buf))
+
+
+class TestSubscribeResult(unittest.TestCase):
+    def test_qos0(self):
+        self.assertEqual(0, mqtt_codec.packet.SubscribeResult.qos0.qos())
+
+    def test_qos1(self):
+        self.assertEqual(1, mqtt_codec.packet.SubscribeResult.qos1.qos())
+
+    def test_qos2(self):
+        self.assertEqual(2, mqtt_codec.packet.SubscribeResult.qos2.qos())
+
+    def test_fail_qos(self):
+        self.assertRaises(TypeError, mqtt_codec.packet.SubscribeResult.fail.qos)
 
 
 class TestSubackCodec(CodecHelper, unittest.TestCase):
@@ -228,10 +340,25 @@ class TestSubackCodec(CodecHelper, unittest.TestCase):
             mqtt_codec.packet.SubscribeResult.fail,
         ]))
 
+    def test_bad_result(self):
+        # with BytesIO() as f:
+        #     mqtt_codec.packet.MqttSuback(3, [mqtt_codec.packet.SubscribeResult.qos0,]).encode(f)
+        #     print(repr(f.getvalue()))
+
+        buf = bytearray(b'\x90\x03\x00\x03\x00')
+        buf[-1] = 0xff
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttSuback.decode, BytesReader(buf))
+
 
 class TestPublish(CodecHelper, unittest.TestCase):
     def test_publish(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', False, 2, False))
+
+    def test_publish_retain_qos0(self):
+        self.assert_codec_okay(mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', False, 0, True))
+
+    def test_publish_dupe_retain_qos1(self):
+        self.assert_codec_okay(mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', True, 1, True))
 
     def test_publish_payload(self):
         publish = mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', False, 2, False)
@@ -242,50 +369,87 @@ class TestPublish(CodecHelper, unittest.TestCase):
         buf = bytearray(buf)
         num_bytes_consumed, recovered_publish = mqtt_codec.packet.MqttPublish.decode(BytesReader(buf))
 
+    def test_qos_dupe_disagree_decode(self):
+        # with BytesIO() as f:
+        #     p = mqtt_codec.packet.MqttPublish(3, 'flugelhorn', b'silly_payload', False, 2, False)
+        #     p.encode(f)
+        #     print(repr(f.getvalue()))
+
+        buf = bytearray(b'4\x1b\x00\nflugelhorn\x00\x03silly_payload')
+        buf[0] = buf[0] & 0xf0 | 0x08
+        self.assertRaises(DecodeError, mqtt_codec.packet.MqttPublish.decode, BytesReader(buf))
+
 
 class TestPuback(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPuback(2))
+
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttPuback(2))
 
 
 class TestPubrec(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPubrec(3))
 
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttPubrec(2))
+
 
 class TestPubrel(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPubrel(3))
+
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttPubrel(2))
 
 
 class TestPubcomp(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPubcomp(3))
 
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttPubcomp(2))
+
 
 class TestUnsubscribe(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttUnsubscribe(3, ['flugelhorn']))
+
+    def test_type_error(self):
+        self.assertRaises(TypeError, mqtt_codec.packet.MqttUnsubscribe, 3, 'str')
 
 
 class TestUnsuback(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttUnsuback(3))
 
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttUnsuback(2))
+
 
 class TestPingreq(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPingreq())
+
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttPingreq())
 
 
 class TestPingresp(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttPingresp())
 
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttPingresp())
+
 
 class TestDisconnect(CodecHelper, unittest.TestCase):
     def test_subscribe(self):
         self.assert_codec_okay(mqtt_codec.packet.MqttDisconnect())
+
+    def test_extra_bytes(self):
+        self.assert_extra_bytes_fail(mqtt_codec.packet.MqttDisconnect())
 
 
 class TestDecode(unittest.TestCase):
