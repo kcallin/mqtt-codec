@@ -113,7 +113,7 @@ def are_flags_valid(packet_type, flags):
                          MqttControlPacketType.disconnect):
         rv = flags == 0
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(packet_type)
 
     return rv
 
